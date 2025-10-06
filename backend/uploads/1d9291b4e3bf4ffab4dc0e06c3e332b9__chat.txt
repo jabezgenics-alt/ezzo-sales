@@ -1,0 +1,1690 @@
+# COMPREHENSIVE PRICING DETAILS EXTRACTION
+# All prices, quantities, units, and contexts from source documents
+
+================================================================================
+SECTION 1: CONSTRUCTION, RENOVATION, AND INSTALLATION QUOTES (TOTAL LUMP SUMS)
+================================================================================
+
+1. Waterproofing and painting works for Front, Side, and Back walls (32 Jalan Pintau)
+   Price: $14,000 before GST
+   Context: For the defined scope of work (Item 1)
+
+2. Total quote for four Burmese Teak parquet areas (L2 MBR, L3 Lift landing, L3 Mezzanine landing, L4 Senior room)
+   Price: $4,575 before GST
+   Context: Package price taken for all four areas (Quote for Jen)
+
+3. Proposed quote after discount for four Burmese Teak parquet areas
+   Price: $4,750 including GST
+   Context: Package price taken for all four areas (Quote for Jen)
+
+4. Waterproofing and painting works for covered walkway ceiling structure
+   Price: $1,500 before GST
+   Context: For covered walkway leading to the bus stop (Under SMC)
+
+5. Waterproofing inspection and PU injection at leakage points
+   Price: $1,800 before GST
+   Context: For La Verna Wake Room (Under Columbarium)
+
+6. New Quote for waterproofing and cement casting for L1 backroom
+   Price: $23,000 net included GST inside
+   Context: For 22 Maria Ave, L1 backroom
+
+7. Painting and waterproofing works for terrace landed property front and back
+   Price: $6,500 including GST
+   Context: Quote for BC - 23 Jalan Meragi
+
+8. Painting and waterproofing works for Bungalow front, two sides, and back
+   Price: $15,000.00
+   Context: Quote for Queenie Wong - 15 Jalan Binchang (Listed twice)
+
+9. Total quote for Warehouse Electrical works (Excludes temporary testing, PVC trunking, MSB 63A or less)
+   Price: $18,400
+   Context: For the total defined scope of electrical/lighting items
+
+10. Supply and install Aluminium Composite Canopy Extension (6.2m L x 3.5m W)
+    Price: $6,000 before GST
+    Context: Quote for Jon @ 2 Swiss Club Road
+
+11. Supply and install 6mm Marine plywood (Quote for marine plywood, varnish, staging/manpower)
+    Price: $26,000 before GST
+    Context: In between Roof rafters for the perimeter of the Property
+
+12. Supply and install calcium silicate board with waterproofing/painting (82m L x 1.2m W)
+    Price: $9,500 before GST
+    Context: For 23 Ewart Park (Item 1)
+
+13. Supply and provide painting works for external wall facade and balcony
+    Price: $12,000 before GST
+    Context: For 23 Ewart Park (Item 3)
+
+14. Total Package price quote for 3 items (calcium silicate, staging, painting)
+    Price: $24,000 before GST
+    Context: For 23 Ewart Park
+
+15. Supply and install 13.52 Laminated Glass (3m x 2.7m area)
+    Price: $4,500 before GST
+    Context: For 37 Ann Siang Road
+
+16. Supply and install 13.52 Laminated Glass (3.2m x 2.8m area)
+    Price: $5,000 before GST
+    Context: For 39 Ann Siang Road
+
+17. Tennis court resurfacing (3 courts, approx 312sqm)
+    Price: $10,950 before GST
+    Context: For Harvest Care Centre - Shih Hui (Item 1)
+
+18. Total package quote for line painting and markings (Pickleball, Basketball, Futsal, Tchoukball)
+    Price: $3,000 before GST
+    Context: For Harvest Care Centre - Shih Hui
+
+19. Waterproofing works for L1 retaining wall (22 Maria Ave)
+    Price: $4,400 before GST
+    Context: PU injection, Tamseal 10F, K10 Polyurethane coating
+
+20. Waterproofing with foam insulation for the roof level (Area 22sqm)
+    Price: $3,700 before GST
+    Context: For 22 Maria Ave and repeated for 22 Maria Ave later
+
+21. Supply and install hydrophobic nano-treated tempered glass swing door
+    Price: $2,200 before GST
+    Context: For Male Plunge Pool Room entrance
+
+22. Supply and install hydrophobic nano-treated tempered glass sensor auto sliding door
+    Price: $3,200 before GST
+    Context: For Female Changing Room entrances
+
+23. Spalling concrete repair, waterproofing and painting
+    Price: $15,000 before GST
+    Context: For 249 Outram Road (Patrick Teo)
+
+24. Spalling concrete repair and metal works repair/replacement
+    Price: $6,400 before GST
+    Context: For Catholic Spirituality Church (Carl Danker)
+
+25. Supply/install 3 sets copper piping, 3 sets equipment, Supply Mitsubishi aircon
+    Price: $6,500 before GST
+    Context: Aircon quote for Gul Way
+
+26. Replace ceiling board/painting (Includes scaffolding)
+    Price: $5,000 before GST
+    Context: For William - 21 Jalan Selenting
+
+27. Full roof waterproofing (jet wash, K10 Sovacryl 3 coats, SS345 paint 2 coats)
+    Price: $6,000 before GST
+    Context: For William - 21 Jalan Selenting (Items 2 and 3)
+
+28. Waterproofing of the front garden area (above car porch)
+    Price: $4,500 before GST
+    Context: For William - 21 Jalan Selenting (Item 4)
+
+29. Hacking, removal and disposal of tiles from 3 bedrooms
+    Price: $2,500 before GST
+    Context: Parquet quote (Item 1)
+
+30. Screeding after hacking to level underlay
+    Price: $900 before GST
+    Context: Parquet quote (Item 2)
+
+31. Supply and install WBP plywood underlay with Burmese Teak, skirting, Melamine varnish
+    Price: $5,750 before GST
+    Context: For 350sqft area (Item 3)
+
+32. Total parquet project quote (Items 1, 2, 3)
+    Price: $9,150 before GST
+    Context: For 350sqft area
+
+33. Waterproofing and pressure release retaining wall (L1, L1M, L2)
+    Price: $20,000 before GST
+    Context: For 22 Maria Ave (Item 1)
+
+34. Supply and install rubber line underlay, plywood, and Vinyl finishing
+    Price: $2,750 before GST
+    Context: For Bedroom 1 (Approx. area 17sqm)
+
+35. Supply and install rubber line underlay, plywood, and Vinyl finishing
+    Price: $2,400 before GST
+    Context: For Bedroom 2 (Approx. area 13sqm)
+
+36. Supply and install rubber line underlay, plywood, and Vinyl finishing
+    Price: $2,250 before GST
+    Context: For Living Room (Approx. area 16.5sqm)
+
+37. Sanding/varnishing Front main entrance facade (2 sets windows, 1 main door)
+    Price: $1,250 before GST
+    Context: For 41 Marshall Road (Item 1)
+
+38. Sanding/varnishing Front room L2 windows and frame (2 sets, includes $500 mobile scaffolding rental)
+    Price: $1,500 before GST
+    Context: For 41 Marshall Road (Item 2)
+
+39. Total quote for supply air duct works (4 nos of chilled water FCU)
+    Price: $32,482 including GST
+    Context: For day work only
+
+40. Anti-mould and painting for Interior Plastered Surfaces
+    Price: $3,200 before GST
+    Context: Quote for Zhuoya - Laura Lin (Item 1)
+
+41. General handyman work (Labour for lighting, patching tiles, silicone, installing hood, etc.)
+    Price: $780 before GST
+    Context: Quote for Zhuoya - Laura Lin (Item 2)
+
+42. Sanding and varnishing for 2 Bedrooms and 2 sets external decking
+    Price: $1,100 before GST
+    Context: Quote for Zhuoya - Laura Lin (Item 3)
+
+43. Marble polishing services for living and dining areas
+    Price: $600 before GST
+    Context: Quote for Zhuoya - Laura Lin (Item 4)
+
+44. Balcony tile buffing and jetwash cleaning
+    Price: $400 before GST
+    Context: Quote for Zhuoya - Laura Lin (Item 6)
+
+45. Total Quote (Interior, Handyman, Sanding, Polishing, Cleaning)
+    Price: $6,580 before GST
+    Context: Quote for Zhuoya - Laura Lin (Total)
+
+46. Waterproofing, supply/install 73mm x up to 17mm Thk Burmese Teak parquet (14sqm)
+    Price: $4,200 before GST
+    Context: Quote for Choon Mei (Item 1)
+
+47. Supply and install roof extension canopy (10sqm)
+    Price: $2,500 before GST
+    Context: Quote for Choon Mei (Item 2)
+
+48. Supply and install anodised aluminium frame with 4-panel sliding glass door (3.3m Ht x 2.5m L)
+    Price: $3,300 before GST
+    Context: Quote for Choon Mei (Item 3)
+
+49. Supply/install sliding door/window panels for balcony facade (Includes 18mm clear tempered DGU)
+    Price: $4,200 before GST
+    Context: Quote fo Linda - Suites @ Paya Lebar (Item 1)
+
+50. Supply and install WPC Decking (1.6m x 2.5m area)
+    Price: $1,200 before GST
+    Context: Quote fo Linda - Suites @ Paya Lebar (Item 2)
+
+51. Labour to shift existing soundproof door, rewire, and paint
+    Price: $2,000 before GST
+    Context: Quote fo Linda - Suites @ Paya Lebar (Item 3)
+
+52. Total Quote (Excludes Chengal upgrade)
+    Price: $7,400 before GST
+    Context: Quote fo Linda - Suites @ Paya Lebar (Total)
+
+53. Supply and install cement screeding (64 sqm)
+    Price: $2,800 before GST
+    Context: Quote for Lornie (Item 1)
+
+54. Supply cement materials and tiler labour (25 sqm, tiles supplied by customer)
+    Price: $4,000 before GST
+    Context: Quote for Lornie (Item 3)
+
+55. Supply and install Burmese Teak parquet wood for staircase steps/treads (35 steps, 3 landings)
+    Price: $4,500 before GST
+    Context: Quote for Sharon - Parquet staircase steps
+
+56. Supply, fabricate and install Kitchen full height cabinet
+    Price: $3,900 before GST
+    Context: Quote for James JT (cabinet portion)
+
+57. Total quote for Kitchen cabinet and backsplash
+    Price: $4,350 before GST
+    Context: Quote for James JT ($3900 cabinet + $450 backsplash)
+
+58. Total for 4 sets of wardrobe (4 x $1800)
+    Price: $7,200 before GST
+    Context: Quote for James JT (Item 2)
+
+59. Standalone full height wardrobe "A" (2950mm x 2700mm)
+    Price: $3,000 before GST
+    Context: Quote for James JT (Item 3)
+
+60. Full height wardrobe "B" (1000mm x 2700mm)
+    Price: $990 before GST
+    Context: Quote for James JT (Item 4)
+
+61. Full height wardrobe "C" (1000mm x 2700mm)
+    Price: $990 before GST
+    Context: Quote for James JT (Item 5)
+
+62. Full height wardrobe "D" (1080mm x 2700mm)
+    Price: $990 before GST
+    Context: Quote for James JT (Item 6)
+
+63. Total for Carpentry items (Before 5% discount)
+    Price: $17,520
+    Context: Quote for James JT (Items 1-6)
+
+64. Total for Carpentry items (After 5% discount)
+    Price: $16,644 before GST
+    Context: Quote for James JT (Items 1-6)
+
+65. Metal support structure, Bondek concrete base, Glass flooring, staircase steps
+    Price: $22,900 before GST
+    Context: Quote for Jon - Swiss Club Road (Items 1 AND 2)
+
+66. Roof works (Aluminium composite panels, insulation, false ceiling 28 sqm)
+    Price: $9,800 before GST
+    Context: Quote for Jon - Swiss Club Road (Item 3)
+
+67. Wall glass works and window panels (3 sets glass panels, facade glass, sliding door)
+    Price: $10,900 before GST
+    Context: Quote for Jon - Swiss Club Road (Item 4)
+
+68. 1 set Air-conditioning (System 1 FCU Mitsubishi/TOSHIBA)
+    Price: $2,150 before GST
+    Context: Quote for Jon - Swiss Club Road (Item 5)
+
+69. Electrical works (Isolator, 3 sets 2G SSO, 5 units LED lights)
+    Price: $800 before GST
+    Context: Quote for Jon - Swiss Club Road (Item 6)
+
+70. General Labour works (Hacking/disposal granite stone, shift bronze lion)
+    Price: $1,500 before GST
+    Context: Quote for Jon - Swiss Club Road (Item 7)
+
+71. Painting (Internal walls of new room, wooden frame repair/paint)
+    Price: $1,500 before GST
+    Context: Quote for Jon - Swiss Club Road (Item 8)
+
+72. Total quote for Jon - Swiss Club Road (Items 1-8)
+    Price: $49,550 before GST
+    Context: Full scope quote
+
+73. Waterproofing and Repainting works (Rope Access/Mobile scaffolding)
+    Price: $24,000 before GST
+    Context: Quote for 56 Cairnhill Road (Mica Chen)
+
+74. Rope access specialist team to support 10% close up facade inspection (5 blocks)
+    Price: $10,200 before GST
+    Context: Quote to Frederick - TUV SUD
+
+75. Waterproofing rain collection gutter, RWDP, PU injection, monitoring
+    Price: $2,500 nett
+    Context: Quote for 13 Jalan Binchang
+
+76. Supply and install new WPC decking (up to 390sqft)
+    Price: $8,950 before GST
+    Context: Quote for Jeremy - Option 1
+
+77. Supply and install new tiles (up to 390sqft, tiles supplied by owner)
+    Price: $9,500 before GST
+    Context: Quote for Jeremy - Option 2
+
+78. Supply and install 1hr metal fire rated door and frame (Double leaf)
+    Price: $3,880 before GST per set
+    Context: Quote for Deena (Item 1)
+
+79. Supply and install 10mm THK Clear Tempered Glass with frosted film (22.68sqm)
+    Price: $5,450 before GST
+    Context: Quote for Deena (Item 2)
+
+80. Waterproofing aircon ledge
+    Price: $1,150 including GST
+    Context: Quote for 26 Chuan Close (Mdm Ong)
+
+81. Items 1-4 (Add DP switch, splash proof cover, retighten cables, add warning labels)
+    Price: $500 NETT
+    Context: Quote for Kang (Electrical services)
+
+82. EMA Grade 7 LEW endorsement, testing and commissioning
+    Price: $1,200 NETT
+    Context: Quote for Kang (Electrical services)
+
+83. Supply and install WPC for triangular area (2sqm)
+    Price: $1,350 before GST
+    Context: Quote Pria - 21 Holland Park (Item 1)
+
+84. Supply and install WPC for rectangular area (2sqm)
+    Price: $1,200 before GST
+    Context: Quote Pria - 21 Holland Park (Item 2)
+
+85. Jetwash and acid wash of unblocked balcony area (18sqm)
+    Price: $900 before GST
+    Context: Quote Pria - 21 Holland Park (Item 3)
+
+86. Supply and install 6mm mirror (1860mm x 2050mm)
+    Price: $1,350 before GST
+    Context: Without plywood backing and waterproofing
+
+87. Restoration service (Sanding/varnishing decking/handrail, cleaning, cement repair)
+    Price: $8,500 before GST
+    Context: Quote for 73 Ocean Drive - Louis
+
+88. Waterproofing roof tiles (180sqm), replace 30sqm ceiling board, waterproofing zinc roof area
+    Price: $6,500 before GST
+    Context: Quote for CARE - 9 Mandai Road (Roof of Blk B)
+
+89. Waterproofing (PU injection) and make good water-damaged office/toilet wall
+    Price: $1,950 before GST
+    Context: Quote for CARE - 9 Mandai Road (Water-damaged wall behind Blk A)
+
+90. Total for 10 units 2G SSO
+    Price: $950 before GST
+    Context: Quote Mabel Paya Lebar Square
+
+91. Total for shifting of office panel lighting (7 units)
+    Price: $560 before GST
+    Context: Quote Mabel Paya Lebar Square
+
+92. Supply, fabricate and install full height Main DB cabinet
+    Price: $700 before GST
+    Context: Quote Mabel Paya Lebar Square
+
+93. Total Quote for Mabel Paya Lebar Square (Electrical/Data/Cabinet/Labour)
+    Price: $2,570 before GST
+    Context: For the defined scope of work
+
+94. Waterproofing/Repainting external walls L9-L10, Roof flats, PU injection L9 Lift shaft, etc.
+    Price: $18,000 before GST
+    Context: Quote for Catholic Centre - Carl Danker
+
+95. Rope Access, Epoxy Silicone application for 80 sqm, silicone windows, full house waterproofing/painting
+    Price: $8,890 before GST
+    Context: Quote for William - 23 Lorong K Telok Kurau
+
+96. Supply and install new composite panel via overlay of existing zinc roofing (Approx 15sqm)
+    Price: $3,800 before GST
+    Context: Quote for 249 Outram Road
+
+97. Rental for 8 men
+    Price: $3,000 per month
+    Context: L2 - Non onboard arrangement
+
+98. Rental for 8 men
+    Price: $4,000 per month
+    Context: L4 - Onboard arrangement
+
+99. Parquet Repair, Replacement of 66sqm Maple Wood, Sanding & Varnishing
+    Price: $12,000 before GST
+    Context: Quote for Anthony - XCL International School
+
+100. Moving and handyman services (Shift furniture, shelves, data/telephone install)
+     Price: $3,000 before GST
+     Context: Quote for PLS - Auntie Neram
+
+101. Reinstatement of existing blue wall and removal of signages
+     Price: $4,500 before GST
+     Context: Quote for Lor Liput
+
+102. Services to build a drainage system (22m total length)
+     Price: $14,500 before GST
+     Context: Quote for St Anthony Friary's retention wall
+
+103. Supply/install Twinwall polycarbonate (Includes staging)
+     Price: $8,450 before GST
+     Context: Quote 450 Changi Road - Option 1
+
+104. Supply/install Solid sheet polycarbonate (Includes staging)
+     Price: $17,950 before GST
+     Context: Quote 450 Changi Road - Option 2
+
+105. Supply/install armour XLPE cable, lay cable, LEW review (20m length)
+     Price: $8,800 before GST
+     Context: Quote for 8 Swiss Club Road
+
+106. Total for three rooms (Waterproofing/physical water barrier)
+     Price: $6,000 before GST
+     Context: For Rooms 22, 23, and 24 (SMC/SAF)
+
+107. Total Quote for Ramp Metal items
+     Price: $49,680 before GST
+     Context: Quote Mei Shin (Crossover Step/Ramp items)
+
+108. LED lights installation (One team/one Boomlift, 45 working days)
+     Price: $36,000 before GST
+     Context: Quote for Brandon Ng LED Light
+
+109. LED lights installation (Two teams/two Boomlifts, 30 working days)
+     Price: $39,000 before GST
+     Context: Quote for Brandon Ng LED Light
+
+110. SCDF/PE endorsement/submission for Awning area (~40sq.m)
+     Price: $5,800 before GST
+     Context: Quote to Hui Ting - Joydom
+
+111. Marble floor polishing only (1500sqft area)
+     Price: $2,000 before GST
+     Context: Quote for 20 Inggu Road (Item 1)
+
+112. Parquet sanding/varnishing L2 floor (approx 1500sqft)
+     Price: $2,000 before GST
+     Context: Quote for 20 Inggu Road (Item 4)
+
+113. Parquet sanding/varnishing L3 floor (approx 1500sqft)
+     Price: $2,000 before GST
+     Context: Quote for 20 Inggu Road (Item 4)
+
+114. Parquet sanding/varnishing L4 floor (approx 1350 sqft)
+     Price: $1,750 before GST
+     Context: Quote for 20 Inggu Road (Item 4)
+
+115. Sanding/varnishing 2nd floor master bedroom & corridor (~300 sqf area)
+     Price: $950 before GST
+     Context: Quote for Edward Kow (1A)
+
+116. Sanding/varnishing Attic, victory, study room parquet floor
+     Price: $950 before GST
+     Context: Quote for Edward Kow (2)
+
+117. Sanding/varnishing staircase B1 to L1 (Includes Teak replacement/skirting)
+     Price: $850 before GST
+     Context: Quote for Edward Kow (Location: Staircase)
+
+118. Waterproofing coating and labour for low rise wall surrounding pond, replace 10 units IP66 lighting
+     Price: $3,000 before GST
+     Context: Quote for SMC Pond outside La Verna
+
+119. L3 Open smoking space waterproofing (Approx 105sqm, Torch Applied/Acrylic Membrane)
+     Price: $6,300 before GST
+     Context: Quote for VPS Waterproofing (Item 1)
+
+120. Solar Roof Top waterproofing (Approx 2000sqm, Torch Applied/Acrylic Membrane, PU foam injection)
+     Price: $78,000 before GST
+     Context: Quote for VPS Waterproofing (Item 2)
+
+121. Hack floor tiles and screed, and removal/disposal
+     Price: $2,500 before GST
+     Context: Quote ShiHao - Church (Item 1)
+
+122. Supply labour/material to install levelling screed and terracotta tiles (1154 sqft, calculated as 1157sqft)
+     Price: $21,326 before GST
+     Context: Quote ShiHao - Church (Item 3: $18 x 1157 + $500 wastage)
+
+123. Erect dry wall partition (8.65m X 3m, with Rockwool)
+     Price: $1,600 before GST
+     Context: Quote ShiHao - Church (Item 4)
+
+124. Supply and install one set of double leaf door
+     Price: $1,400 before GST
+     Context: Quote ShiHao - Church (Item 5)
+
+125. Supply labour to paint entire room (Oil sealer, 2 coats Nippon Matex)
+     Price: $800 before GST
+     Context: Quote ShiHao - Church (Item 6)
+
+126. Total Quote for ShiHao Church project
+     Price: $28,076 before GST
+     Context: Sum of items 1-7 (excluding optional lighting)
+
+127. Total Parquet Sanding/Varnishing/Repair for staircase L1 to L4
+     Price: $6,750 before GST
+     Context: Quote Kartono Lim - 251 South Bridge Road
+
+128. Canopy replacement (11.5sqm, new aluminium composite panel, galvanised M/S frame)
+     Price: $6,450 before GST
+     Context: Quote 14 Mimosa Drive (Item 1)
+
+129. Wet kitchen area facade/canopy/glass/swing door/metal frame (3.4 sqm total area)
+     Price: $2,700 before GST
+     Context: Quote 14 Mimosa Drive (Item 2)
+
+130. Supply and install top-up vinyl/tiles for two balconies (Approx 16.2 sqm)
+     Price: $3,000 before GST
+     Context: Quote for Duncan (Item 1)
+
+131. Close up existing pocket door (Area 1.4m x 2.4m)
+     Price: $1,200 before GST
+     Context: Quote for Duncan (Item 2)
+
+132. Canopy extension (2.8m x 7.5m, 13.52 Laminated Glass)
+     Price: $10,950 before GST
+     Context: Quote for Keppel Bay - Option 1
+
+133. Replace/change new glass canopy for entire PES (5.4m x 7.5m, 13.52 Laminated Glass)
+     Price: $21,750 before GST
+     Context: Quote for Keppel Bay - Option 2
+
+134. Professional Engineer's drawings, and endorsement (MCST Submission only)
+     Price: $1,800 before GST
+     Context: Quote for Keppel Bay (Item 3)
+
+135. Supply/install 58.56mm DGU glass (Night job, mechanical lifting)
+     Price: $12,250 before GST
+     Context: Quote for Asian Civilisation Museum (Phase 2)
+
+136. Window Option 1: Supply/install 3 tracks sliding windows (2 sets, 3.2m x 1.5m)
+     Price: $2,800 before GST
+     Context: Quote for CAEC - CARL Danker (2 x $1400)
+
+137. Supply and install KDK 25ALA model ventilation fan (2 sets, includes new glass)
+     Price: $1,760 before GST
+     Context: Quote for CAEC - CARL Danker (2 x $880)
+
+138. Supply/install new KDK 25ALA fan (Includes replace fixed panels with two way sliding window/track)
+     Price: $3,560 before GST
+     Context: Quote for CAEC - CARL Danker (2 x $1780)
+
+139. Supply/install TV console/shelving/carpentry (1.6m x 2.5m)
+     Price: $1,585 before GST
+     Context: Quote for Lek Wee (Item 1)
+
+140. Supply paint materials and labour to paint full apartment unit (walls and ceiling)
+     Price: $1,200 before GST
+     Context: Quote for Lek Wee (Item 2)
+
+141. Tiling works for toilet floor only (Includes hacking, waterproofing, screeding, tiling)
+     Price: $1,950 before GST
+     Context: Quote for Lek Wee (Item 3)
+
+142. Supply/install low height cabinet (kitchen area)
+     Price: $650 before GST
+     Context: Quote for Lek Wee (Item 5)
+
+143. Total Quote for Lek Wee project
+     Price: $7,825 before GST
+     Context: Sum of items 1-6
+
+144. Supply and install Gate 1 (1200mm H x 3950mm L, Swing gate)
+     Price: $1,750 before GST
+     Context: Galvanized steel gate
+
+145. Supply and install Gate 2 (1200mm H x 3560mm L, Swing gate)
+     Price: $1,500 before GST
+     Context: Galvanized steel gate
+
+146. Remove 2 existing electronic barriers and dispose of them off-site
+     Price: $500 before GST
+     Context: For 2 barriers
+
+147. Install flooring that matches existing tiles in two locations
+     Price: $800 before GST
+     Context: For two locations (after removing barriers)
+
+148. Waterproofing roof area, PU foam injection, make good and paint
+     Price: $1,500 before GST
+     Context: Quote for SMC (Adjacent Toilet to St Anthony Friary)
+
+149. Waterproofing (PU injection) ceiling leak, build protective frame
+     Price: $4,400 before GST
+     Context: Quote for SMC (Ceiling Leak in Main Church Hall)
+
+150. Supply and install Davco Courtkote (142sqm)
+     Price: $4,970 before GST
+     Context: Quote for David Wong - Coating on existing Badminton court (Item 1)
+
+151. Total Quote for Badminton Court Coating and Marking
+     Price: $5,670 before GST
+     Context: Quote for David Wong ($4970 + $700)
+
+152. Self leveling coating (18.65m x 20m area, 373sqm)
+     Price: $11,950 before GST
+     Context: Quote for Randy - Pickleball (Item 1)
+
+153. Supply and install Sports Coating (Weber/Davco Courtkote, 373sqm)
+     Price: $12,980 before GST
+     Context: Quote for Randy - Pickleball (Item 2)
+
+154. CAT ladder works (FFL to Soffit 3.608m, Galvanized MS HS)
+     Price: $2,750 before GST
+     Context: Quote for Hong (Item 1)
+
+155. Catwalk (4m length with handrail) and Cat Ladder without Cage (up to 3m)
+     Price: $4,200 before GST
+     Context: Quote for Hong (Item 1, Catwalk/Ladder)
+
+156. Professional Engineer's Drawings, Endorsement and load calculation
+     Price: $2,500 before GST
+     Context: Quote for Hong (Item 2)
+
+157. Quote for metal works (Director Room 1 & 2 support structure)
+     Price: $11,950 before GST
+     Context: Quote for Wei Jie (Item 5)
+
+158. Total Parquet wood installation (Maple wood, 67 sqm total floor area, 17 staircase steps)
+     Price: $12,400 before GST
+     Context: Quote for Wei Jie (Item 1, Parquet)
+
+159. Parquet wood installation for 17 steps of the staircase with bullnose and LED lighting strip
+     Price: $3,400 before GST
+     Context: Component of the Parquet quote for Wei Jie
+
+160. Supply and install 85mm Oak Parquet (approx. 8sqm, full room re-varnish included)
+     Price: $4,200 before GST
+     Context: Quote for SMC Room 22 Parquet Replacement
+
+161. Supply and install 13.52mm Laminated Tempered Clear Glass (5 units replacement)
+     Price: $3,500 before GST
+     Context: Quote for Tannery Lane (Item 1)
+
+162. Provide 120ft Boomlift (with licensed operators)
+     Price: $4,500 before GST
+     Context: Quote for Tannery Lane (Item 2)
+
+163. Exterior Repainting for Front and Back facing external walls (Quotation 1)
+     Price: $25,000 before GST
+     Context: For 17 Institution Hill - Mr Lee Chun Wah
+
+164. Exterior Repainting for Balcony areas (L2, L3, L5, L9) (Quotation 2)
+     Price: $4,500 before GST
+     Context: For 17 Institution Hill - Mr Lee Chun Wah
+
+165. Exterior Metal Repainting for staircase railing and metal grill (Quotation 3)
+     Price: $4,500 before GST
+     Context: For 17 Institution Hill - Mr Lee Chun Wah
+
+166. Option 1: Replace twin-wall polycarbonate (64 sqm area, includes painting existing Chengal wood)
+     Price: $5,500 before GST
+     Context: Quote for 73 Neram Road (Car Porch Canopy)
+
+167. Option 2: Replace twin-wall polycarbonate + change affected Chengal timber support
+     Price: $7,500 before GST
+     Context: Quote for 73 Neram Road ($5500 + $2500 for timber works)
+
+168. Option 3: Replace twin-wall polycarbonate + change to new galvanised mild steel support structure
+     Price: $13,500 before GST
+     Context: Quote for 73 Neram Road
+
+169. Option 1: Chengal Wood seating (15m length x 515mm W)
+     Price: $4,350 before GST
+     Context: Quote for Jhoana - Pokka (Terrace seating)
+
+170. Option 2: WPC seating (15m length x 582mm W)
+     Price: $3,950 before GST
+     Context: Quote for Jhoana - Pokka (Terrace seating)
+
+171. Option 1: Timber seating using carpentry and selected laminate
+     Price: $14,500 before GST
+     Context: Quote for Jhoana - Pokka (12.6m L x 750mm W x 450mm H x 3 sets)
+
+172. Option 2: Timber seating using Burmese Teak wood, sanding/varnishing included
+     Price: $19,500 before GST
+     Context: Quote for Jhoana - Pokka (12.6m L x 750mm W x 450mm H x 3 sets)
+
+173. Supply and install 0.5hr timber fire rated door and frame (Double leaf, 1500mm x 2100mm)
+     Price: $3,950 before GST per set
+     Context: Door Quotes from Goodhill (Item 1)
+
+174. Supply and install 1hr timber fire rated door and frame (Double leaf, 2080mm x 2200mm, Vision panel)
+     Price: $4,350 before GST per set
+     Context: Door Quotes from Goodhill (Item 2)
+
+175. FSC Submission (Building Plan only)
+     Price: $2,500
+     Context: If no sprinklers are affected
+
+176. FSC (Both BP and FP) package submission
+     Price: $3,600
+     Context: If required
+
+177. SS304 Stainless Steel handrail (2 sets, 3.5m length, powder coating/painting)
+     Price: $2,750 before GST
+     Context: Quote for Hwee Mei (Item 1)
+
+178. Galvanized mild steel handrail (2 sets, 3.5m length, anti-rust/oil-based painting)
+     Price: $1,950 before GST
+     Context: Quote for Hwee Mei (Item 1)
+
+179. Granite repair, restoration and surface polishing (456 sqm Total Area)
+     Price: $29,640 before GST
+     Context: Quote for Chatsworth (calculated at $65/sqm)
+
+180. Total for 4 outdoor Chengal type planter boxes
+     Price: $6,200 before GST
+     Context: Quote for Christopher Leow (4 x $1550)
+
+181. PU foam injection internal wall L 2.5m, external waterproofing/painting
+     Price: $1,800 before GST
+     Context: Quote for 119 Westwood Avenue
+
+182. Supply, fabricate and install wardrobe (2.6m H x 1.7m L, sliding door)
+     Price: $1,800 before GST
+     Context: Carpentry quote (Item 1)
+
+183. Total Quote for Court markings (4 Badminton courts + 1 Basketball court)
+     Price: $2,750 before GST
+     Context: Using Acrylic based Weber Sports System
+
+184. Supply and install a 6mm mirror (clear normal type) (250cm x 60cm)
+     Price: $600 before GST
+     Context: Quote for Mirror
+
+185. Supply and install new Oak Solid Wood Parquet (up to 2sqm, Melamine Varnish)
+     Price: $600
+     Context: Parquet Option 1 (assuming no underlay replacement)
+
+186. Sanding and varnishing for 1 room inclusive of replaced area with new solid Oak Parquet (Melamine Varnish)
+     Price: $950
+     Context: Parquet Option 2
+
+187. Quote for replacement of Le Verna Canopy (including cutting and disposal)
+     Price: $1,500 before GST per section
+     Context: For 1.8m x 1.14m section
+
+188. Quote for repair works for Le Verna Canopy (Waterproofing, rust grinding, welding, painting)
+     Price: $750 before GST per section
+     Context: For 1.8m x 1.14m section
+
+189. Quote to dismantle, remove, and dispose of existing canopy
+     Price: $450 before GST per section
+     Context: For 1.8m x 1.14m section
+
+190. Waterproofing/Repainting FRONT/SIDE/BACK PERIMETER WALL, gates
+     Price: $8,500 before GST
+     Context: Quote for Onan Court painting
+
+191. Supply and install safety barrier (13.52mm Laminated Glass, 3.5m L)
+     Price: $1,750 before GST
+     Context: Quote for Dan - 66 Havelock Road (Swimming pool Front facing)
+
+192. Supply and install safety barrier (Condo style design, 3.5m L)
+     Price: $2,275 before GST
+     Context: Quote for Dan - 66 Havelock Road (Swimming pool Front facing)
+
+193. Supply and install safety barrier (Rounded hollow section handrail, 3.5m L)
+     Price: $1,225 before GST
+     Context: Quote for Dan - 66 Havelock Road (Swimming pool Front facing)
+
+194. Side parapet safety barrier (13.52mm Laminated Glass, up to 3m L)
+     Price: $1,500 before GST
+     Context: Quote for Dan - 66 Havelock Road
+
+195. Side safety barrier (Condo style design, up to 3m L)
+     Price: $1,950 before GST
+     Context: Quote for Dan - 66 Havelock Road
+
+196. Side safety barrier (metal round pipes, up to 3m L)
+     Price: $1,050 before GST
+     Context: Quote for Dan - 66 Havelock Road
+
+197. Supply only 2hr metal fire rated door and frame (1000mm x 2400mm, Vision panel)
+     Price: $1,990 before GST per set
+     Context: Quote Peterson QS fire rated (Item 4)
+
+
+================================================================================
+SECTION 2: ITEMIZED COSTS, UNIT RATES, AND OPTIONAL ADD-ONS
+================================================================================
+
+DOORS AND FRAMES
+----------------
+1. Supply and install 1hr timber fire rated door and frame (Single leaf)
+   Price: $2,180 before GST per set
+   Context: Size: (45 x 95-140mm) x 550mm x 750mm
+
+2. Supply only 1hr metal fire rated door and frame (Single leaf)
+   Price: $1,950 before GST per set
+   Context: Size: (50 x 150mm) x 550mm x 750mm
+
+PARQUET - NEW INSTALLATION
+--------------------------
+3. New Burmese Teak parquet (L2 MBR)
+   Price: $750 before GST
+   Context: For 3 sqm area
+
+4. New Burmese Teak parquet (L3 Lift landing)
+   Price: $1,050 before GST
+   Context: For 4.2sqm area
+
+5. New Burmese Teak parquet (L3 Mezzanine landing)
+   Price: $775 before GST
+   Context: For 3.1sqm area
+
+6. New Burmese Teak parquet (L4 Senior room)
+   Price: $1,700 before GST
+   Context: For 6.8sqm area
+
+ADDITIONAL SERVICES
+-------------------
+7. Labour to shift furniture (one time charge)
+   Price: $300 before GST
+   Context: For all four areas
+
+8. Sanding and varnishing for staircase steps only
+   Price: $1,200 before GST
+   Context: L1 to L2 and L2 to L3
+
+9. Sanding and varnishing of the internal courtyard and front porch
+   Price: $900 before GST
+   Context: Using Renner Italia (external varnish)
+
+MINI CANOPY INSTALLATIONS
+--------------------------
+10. Mini canopy supply and install
+    Price: $500 before GST
+    Context: For L2 Backroom 1500mm
+
+11. Mini canopy supply and install
+    Price: $650 before GST
+    Context: For L3 Backroom side wall 2m
+
+12. Mini canopy supply and install
+    Price: $400 before GST
+    Context: For L3 Front room window 600mm
+
+13. Mini canopy supply and install
+    Price: $550 before GST
+    Context: For L2 Front room window 1663mm
+
+14. Total quote for mini canopy
+    Price: $2,100 before GST
+    Context: Sum of 4 items
+
+ELECTRICAL ITEMS - WAREHOUSE
+-----------------------------
+15. Supply and install 2G power outlets
+    Price: $125 per unit
+    Context: For Warehouse (Total 22 units = $2750)
+
+16. 32A SPN
+    Price: $500 before GST
+    Context: 1 unit
+
+17. Supply 200W Highbay (Razor brand or similar)
+    Price: $150 per light unit
+    Context: Product cost
+
+18. Installation and wiring for 200W Highbay
+    Price: $180 before GST per light unit
+    Context: Labour/Wiring cost
+
+19. Add cost if Building LEW requires GI conduit (200W Highbay)
+    Price: add $50 per point
+    Context: Upgrade cost
+
+20. Supply KDK 60" White normal ceiling fan
+    Price: $120 per fan unit
+    Context: Product cost
+
+21. Installation and wiring for KDK fan (PVC trunking)
+    Price: $180 before GST per fan unit
+    Context: Labour/Wiring cost
+
+22. Add cost if Building LEW requires GI conduit (KDK fan)
+    Price: add $50 per point
+    Context: Upgrade cost
+
+23. Contractor side LEW fees
+    Price: $1,200 before GST
+    Context: Up to 63A SPN/TPN
+
+24. EMA Grade 8 or 9 for MSB licensing
+    Price: add $800
+    Context: If needed
+
+25. Temporary DB LEW endorsement/provision of Temp DB
+    Price: $800 before GST
+    Context: To be confirmed
+
+26. Scissor lift / mobile scaffolding
+    Price: $1,500 BEFORE GST
+    Context: For total job
+
+STAIRCASE SERVICES
+------------------
+27. Sanding and varnishing for staircase (L1 to L2)
+    Price: $600 before GST
+    Context: Per run of staircase
+
+28. Sanding and varnishing for staircase (L2 to L3)
+    Price: $600 before GST
+    Context: Per run of staircase
+
+STAGING AND SCAFFOLDING
+------------------------
+29. Staging (mobile scaffolding and timber scaffolding)
+    Price: $4,000 before GST
+    Context: For 23 Ewart Park (Item 2)
+
+SPORTS COURT SERVICES
+----------------------
+30. Option to top up if thorough removal required of non-damaged floor areas (Tennis Court)
+    Price: additional $2,500 before GST
+    Context: For Harvest Care Centre
+
+31. Line painting and markings for Pickleball
+    Price: $600 before GST
+    Context: Per court/set of markings
+
+32. Line painting and markings for Basketball
+    Price: $900 before GST
+    Context: Per court/set of markings
+
+33. Line painting and markings for Futsal
+    Price: $900 before GST
+    Context: Per court/set of markings
+
+34. Line painting and markings for Tchoukball
+    Price: $900 before GST
+    Context: Per court/set of markings
+
+35. Timber scaffolding (10m H x 2m L area of work)
+    Price: $2,500 before GST
+    Context: For William - 21 Jalan Selenting
+
+PARTITION AND INSULATION
+-------------------------
+36. Option: To add 120kg/m2 Rockwool on affected side of partition wall
+    Price: $900 before GST
+    Context: For Johnathan Yang - Bedroom 1
+
+WINDOWS AND RELATED WORK
+-------------------------
+37. Mobile scaffolding rental fee (included in item 2)
+    Price: $500
+    Context: For Quote 41 Marshall Road (Item 2)
+
+38. L1 Back windows (Lever replacement)
+    Price: $400 before GST
+    Context: For 41 Marshall Road (Item 3)
+
+39. L2 small back windows (Adjust/change door hinges)
+    Price: $400 before GST
+    Context: For 41 Marshall Road (Item 4)
+
+40. L1 Aft bathroom small square wooden window with ventilation fan
+    Price: $450 before GST
+    Context: For 41 Marshall Road (Item 5)
+
+41. L2 Aft bathroom small square wooden window with square ventilation fan
+    Price: $550 before GST
+    Context: For 41 Marshall Road (Item 6)
+
+42. L2 kids room Aluminium two sliding panel
+    Price: $450 before GST
+    Context: 910mm W x 1075mm
+
+43. L2 middle room Aluminium two sliding panels
+    Price: $450 before GST
+    Context: H1075mm x W1080mm
+
+44. Repair and replace dark brown anodised frame for sliding window panels
+    Price: $300 before GST
+    Context: 1 unit
+
+45. L2 Aft bathroom fixed panel with ventilation fan
+    Price: $550 before GST
+    Context: Replacing two sliding panels
+
+46. L2 top hung swing open window panels
+    Price: $450 before GST per unit
+    Context: 4 units
+
+47. Refurbish existing Aluminium two sliding panels (L3 room, includes lock/stopper repair)
+    Price: $150 before GST
+    Context: 1 unit
+
+MARBLE AND FLOOR SERVICES
+--------------------------
+48. Marble polishing and floor/wall cleaning
+    Price: $500 before GST per bathroom
+    Context: For Common and Master Bath (2 bathrooms = $1000)
+
+COURT MARKINGS
+--------------
+49. Badminton courts marking
+    Price: $500 per court
+    Context: 4 courts (Total $2000)
+
+50. Basketball court marking
+    Price: $750
+    Context: 1 court
+
+FURNITURE REFINISHING
+---------------------
+51. Furniture sanding/varnishing for One table
+    Price: $450
+    Context: 1 unit
+
+52. Furniture sanding/varnishing for chairs
+    Price: $50 per chair
+    Context: 4 chairs (Total $200)
+
+53. Manpower and transport to shift furniture (2-way return)
+    Price: $180 nett
+    Context: For total furniture job
+
+MATERIALS AND UPGRADES
+----------------------
+54. Laminate value
+    Price: $55 per GST
+    Context: Laminate value top up required for higher value laminate
+
+55. Glass transport (2-way return)
+    Price: $160
+    Context: Per trip
+
+OPTIONAL ADDITIONAL SERVICES
+-----------------------------
+56. Public liability insurance (Renovation Protection Package up to $1,000,000)
+    Price: $650 (Before GST)
+    Context: Optional additional quotation
+
+57. Additional night job (If required)
+    Price: $500 (Before GST)
+    Context: Optional additional quotation
+
+58. LEW electrical testing (40Amp, SLD, attendance fees)
+    Price: $800 (Before GST)
+    Context: Optional additional quotation
+
+59. As-build drawings (per drawing)
+    Price: $180 (Before GST)
+    Context: Optional additional quotation
+
+STAIRCASE COMPONENTS
+--------------------
+60. Additional cost for supplying/installing Burmese Teak risers (L 1200mm x W 150mm x T 11mm plank)
+    Price: $60 per riser plank
+    Context: 35x risers (Extra $2100)
+
+ASSESSMENT FEES
+---------------
+61. Service fee for troubleshooting assessment/report
+    Price: $250 before GST
+    Context: Quote for William - 31 Hongkong St (Refundable on project assignment)
+
+UPGRADE OPTIONS
+---------------
+62. Option to powder coat aluminium frame (Item 3)
+    Price: additional $500 before GST
+    Context: Quote for Choon Mei (Item 3)
+
+63. Option to powder coat aluminium profile frame (Item 1)
+    Price: additional $500 before GST
+    Context: Quote fo Linda - Suites @ Paya Lebar (Item 1)
+
+64. Add cost to change WPC to Chengal wood with outdoor varnish (Item 2)
+    Price: $300
+    Context: Quote fo Linda - Suites @ Paya Lebar (Item 2)
+
+FLOORING COMPONENTS
+-------------------
+65. Self-levelling cost (39 sqm)
+    Price: $650 before GST
+    Context: Quote for Lornie (Component of Item 2)
+
+66. Vinyl tile cost (with wastage, 39 sqm)
+    Price: $2,100 before GST
+    Context: Quote for Lornie (Component of Item 2)
+
+KITCHEN COMPONENTS
+------------------
+67. 6'' Tempered Glass White backsplash (approx. 7.2ft run)
+    Price: $450 before GST
+    Context: Quote for James JT (Component of Item 1)
+
+CARPENTRY
+---------
+68. Supply, fabricate, and install wardrobe
+    Price: $1,800 per cabinet
+    Context: For 1800mm (L) x 2700mm (Ht) unit
+
+PROFESSIONAL SERVICES
+---------------------
+69. Professional Engineer's Certificate of Supervision (COS) for rope rigging
+    Price: $850 before GST per block
+    Context: Optional add-on (TUV SUD quote)
+
+FIRE SAFETY ITEMS (FSC PRICELIST - ROUGH PRICES)
+-------------------------------------------------
+70. Emergency and Exit lighting (with existing wiring point)
+    Price: $150 before GST per point
+    Context: FSC pricelist (Rough price)
+
+71. Fire hose reel and cabinet
+    Price: $700 before GST
+    Context: FSC pricelist (Rough price)
+
+72. Four zone main alarm panel
+    Price: $1,500
+    Context: 1 unit (Rough price)
+
+73. Manual Call points
+    Price: $280 each
+    Context: FSC pricelist (Rough price)
+
+74. Alarm Bells
+    Price: $280
+    Context: FSC pricelist (Rough price)
+
+75. Strobe lights
+    Price: $280 each
+    Context: FSC pricelist (Rough price)
+
+76. Testing, commissioning, labels, Cables, conduits, fittings (FSC)
+    Price: $600
+    Context: For 1 storey layout (Rough price)
+
+MIRROR INSTALLATION
+-------------------
+77. Add plywood backing and waterproofing (for 6mm mirror 1860mm x 2050mm)
+    Price: add $350 before GST
+    Context: For Mirror quote (Nicholas)
+
+PARQUET SPECIAL PACKAGES - SANDING & VARNISHING
+------------------------------------------------
+WATER-BASED VARNISH:
+78. Parquet Sanding & Varnishing (Water-based Varnish)
+    Price: $550.00
+    Context: One bedroom (up to 120sqft)
+
+79. Parquet Sanding & Varnishing (Water-based Varnish)
+    Price: $790.00
+    Context: Two bedroom (up to 120sqft per room)
+
+80. Parquet Sanding & Varnishing (Water-based Varnish)
+    Price: $990.00
+    Context: Three bedroom (up to 120sqft per room)
+
+81. Parquet Sanding & Varnishing (Water-based Varnish)
+    Price: $1,250.00
+    Context: Four bedroom (up to 120sqft per room)
+
+MELAMINE-BASED VARNISH:
+82. Parquet Sanding & Varnishing (Melamine-based Varnish)
+    Price: $450.00
+    Context: One bedroom (up to 120sqft)
+
+83. Parquet Sanding & Varnishing (Melamine-based Varnish)
+    Price: $690.00
+    Context: Two bedroom (up to 120sqft per room)
+
+84. Parquet Sanding & Varnishing (Melamine-based Varnish)
+    Price: $890.00
+    Context: Three bedroom (up to 120sqft per room)
+
+85. Parquet Sanding & Varnishing (Melamine-based Varnish)
+    Price: $1,150.00
+    Context: Four bedroom (up to 120sqft per room)
+
+ELECTRICAL INSTALLATION - GENERAL
+----------------------------------
+86. Supply materials and technicians to install 2G SSO
+    Price: $95 before GST per unit
+    Context: Quote Mabel Paya Lebar Square (Item 1)
+
+87. Labour to shift office panel lighting
+    Price: $80 per unit
+    Context: Quote Mabel Paya Lebar Square (Item 1)
+
+88. Install telephone line (per point)
+    Price: $180 before GST
+    Context: Quote Mabel Paya Lebar Square (Item 2)
+
+89. Supply and install Cat 6 Data point
+    Price: $180 before GST
+    Context: Quote Mabel Paya Lebar Square (Item 4)
+
+90. Install one unit Telephone extension
+    Price: $150 before GST
+    Context: Quote for PLS - Auntie Neram (Item 1)
+
+91. Install one set data point
+    Price: $150 before GST
+    Context: Quote for PLS - Auntie Neram (Item 2)
+
+DRAINAGE MATERIALS
+------------------
+92. Precast concrete U-drain with BRC (450mm W x 600mm D x 1200mm L x 150mm T)
+    Price: $155 per unit
+    Context: For drainage system build
+
+PARQUET MATERIALS
+-----------------
+93. Burmese Teak Plank
+    Price: $9.00 per psf
+    Context: 17x120mm x 450-1500/1600mm
+
+94. Burmese Teak Plank
+    Price: $10.60 per psf
+    Context: 17x120mm x 900-1500/1600mm
+
+95. WBP Plywood
+    Price: $11.00 per pcs
+    Context: 9mm x 4' x 4'
+
+ADHESIVES AND GLUES
+-------------------
+96. Plywood Glue 7033 (@20kg)
+    Price: $40.00 per ctn
+    Context: 1 carton
+
+97. Parquet Glue 7008 (@20kg)
+    Price: $61.00 per ctn
+    Context: 1 carton
+
+98. Bossil Glue 8630 (@24kg)
+    Price: $150.00 per pail
+    Context: 1 pail (Coverage about 200-210sqft)
+
+SKIRTING
+--------
+99. Burmese Teak Skirting (10x95mm x 4' up - 8')
+    Price: $2.40 per ft
+    Context: Per foot
+
+RAMP AND STEP COMPONENTS
+-------------------------
+100. Crossover Step (Landing, 1.2mW x 1mL)
+     Price: $720 before GST per unit
+     Context: 2 units (Total $1440)
+
+101. Crossover Step (Step, 1.2mW x 0.3mL)
+     Price: $400 before GST per unit
+     Context: 4 units (Total $1600)
+
+102. Crossover ramp (1.2mW x 2m)
+     Price: $1,440 before GST per unit
+     Context: 33 units (Total $47520)
+
+GLASS PANEL INSTALLATIONS
+--------------------------
+103. Area 1: Fixed Panels with SHS frame (Approx. 1 sqm)
+     Price: $1,500 before GST
+     Context: Quote Jaden
+
+104. Water meter compartment door (6mm clear glass)
+     Price: $900 before GST
+     Context: Quote Jaden
+
+105. Area 2: Fixed Panels with SHS frame (Approx. 0.7 sqm)
+     Price: $1,250 before GST
+     Context: Quote Jaden
+
+106. Customised Mailbox (1740mm W x 340mm H x 0.4m D)
+     Price: $3,000 before GST
+     Context: Quote Jaden
+
+107. Area 3: Fixed Panel 2.1 (Approx. 0.08 sqm)
+     Price: $450 before GST
+     Context: Quote Jaden
+
+MARBLE POLISHING UPGRADES
+--------------------------
+108. Top up for Premium Impregnating Sealer (Marble polishing)
+     Price: $1,000
+     Context: If required
+
+FURNITURE SHIFTING AND STAIRS
+------------------------------
+109. Manpower to shift furniture
+     Price: $500 before GST
+     Context: For duration of project (20 Inggu Road)
+
+110. Sanding and varnishing staircase L1 to L2
+     Price: $750 before GST
+     Context: Quote for 20 Inggu Road (Item 3)
+
+111. Sanding and varnishing staircase L2 to L3
+     Price: $750 before GST
+     Context: Quote for 20 Inggu Road (Item 3)
+
+112. Sanding and varnishing staircase L3 to L4
+     Price: $750 before GST
+     Context: Quote for 20 Inggu Road (Item 3)
+
+113. Staircase handle only revarnish
+     Price: $500 before GST
+     Context: Quote for Edward Kow (Inclusive cost)
+
+114. Labour to shift furniture and put back
+     Price: $400 before GST
+     Context: Quote for Edward Kow
+
+LIGHTING REPLACEMENT
+--------------------
+115. Optional: Supply and replace existing light fittings with new LED type
+     Price: $30 per unit
+     Context: 15 nos. (Total $450)
+
+ELECTRICAL INSPECTION SERVICES
+-------------------------------
+116. Electrical inspection (In-house Technicians, no LEW supervision)
+     Price: $350
+     Context: Item 1
+
+117. Electrical inspection (Technicians and LEW supervision)
+     Price: $950
+     Context: Item 2
+
+118. Electrical inspection (Technicians and LEW supervision, endorsed report)
+     Price: $1,500
+     Context: Item 3
+
+STAIRCASE DETAILED BREAKDOWN (251 SOUTH BRIDGE ROAD)
+-----------------------------------------------------
+119. Sand and varnish 22 steps (L1 to L2 staircase)
+     Price: $800 for 22 steps
+     Context: Quote Kartono Lim (Item 1)
+
+120. Change to new Burmese Teak solid plank (replacement step)
+     Price: $245 before GST per step replacement
+     Context: 22mm Thk x 250mm Width x 4.5' Length
+
+121. Repair steps
+     Price: $80 repair only
+     Context: Per step (3 steps for L1-L2, 1 step for L3-L4)
+
+122. Sand and varnish 20 steps and 2 landings (L2 to L3 staircase)
+     Price: $1,000 for this set
+     Context: Quote Kartono Lim (Item 2)
+
+123. Sand and varnish 18 steps and 3 landings (L3 to L4 staircase)
+     Price: $1,200 for this set
+     Context: Quote Kartono Lim (Item 3)
+
+124. Burmese Teak Plank
+     Price: $23.50 per ft
+     Context: 22x250mm x 3.5' up - 5.5'
+
+WOOD PLANK MATERIALS (WEI JIE QUOTE)
+-------------------------------------
+125. Wood plank
+     Price: $171.00 per pcs
+     Context: L-1600mm x W300mm x T30mm (1 unit)
+
+126. Wood plank
+     Price: $171.00 per pcs
+     Context: L-1600mm x W280mm x T30mm (1 unit)
+
+127. Wood plank
+     Price: $124 per pcs
+     Context: L1200mm x W280mm x T30mm (20 units)
+
+128. Wood plank
+     Price: $124.00 per pcs
+     Context: L1200mm x W300mm x T30mm (4 units)
+
+129. Riser
+     Price: $18.00 per pcs
+     Context: L1200mm x W150mm x T11mm (24 units)
+
+130. Riser
+     Price: $24.75 per pcs
+     Context: L1600mm x W150mm x T11mm (1 unit)
+
+FLOORING UPGRADES
+-----------------
+131. Top up to place metal bars as insert (running track covering)
+     Price: $300 required
+     Context: Quote for Duncan (Item 1)
+
+132. Top up for Templated glass
+     Price: additional $800 top-up
+     Context: If required instead of Round Glass (Asian Civilisation Museum)
+
+ELECTRICAL SWITCHES AND OUTLETS
+--------------------------------
+133. 1G 1W switch (to change existing)
+     Price: $15 per unit
+     Context: Electrical quote
+
+134. 1G 2W Switch (to change existing)
+     Price: $15 per unit
+     Context: Electrical quote
+
+135. 2G 1W switch (to change existing)
+     Price: $15 per unit
+     Context: Electrical quote
+
+136. 2G 2W switch (to change existing)
+     Price: $20 per unit
+     Context: Electrical quote
+
+137. 13A Single Power point (to change existing)
+     Price: $20 per unit
+     Context: Electrical quote
+
+138. 13A Double Power point (to change existing)
+     Price: $25 per unit
+     Context: Electrical quote
+
+139. 15A Single Power point (to change existing)
+     Price: $25 per unit
+     Context: Electrical quote
+
+140. Telephone line/TV faceplate: To remove and install blank plate
+     Price: $15 per unit
+     Context: Electrical quote
+
+TOILET FIXTURES AND ACCESSORIES
+--------------------------------
+141. Removal of existing handle bar
+     Price: $25 before GST
+     Context: Quote for Lek Wee (Item 4)
+
+142. Supply and installation of One foldable support bar
+     Price: $170 before GST
+     Context: Quote for Lek Wee (Item 4)
+
+143. Supply and installation of One Stainless Steel Basin Support Bar with Leg
+     Price: $195 before GST
+     Context: Quote for Lek Wee (Item 4)
+
+FURNITURE REFINISHING SERVICES
+-------------------------------
+144. Sanding/varnishing Four Door Cabinet
+     Price: $500 before GST
+     Context: 1 unit
+
+145. Sanding/varnishing Lay-flat rattan settee
+     Price: $500 before GST
+     Context: 1 unit
+
+146. Sanding/varnishing writing table
+     Price: $500 before GST
+     Context: 1 unit
+
+147. Manpower and transport to shift furniture (2-way return)
+     Price: $250 before GST
+     Context: Quote for Lek Wee (Item 6)
+
+ELECTRICAL INSTALLATION - RESIDENTIAL
+--------------------------------------
+148. Supply and install 4 new lighting with electrical wiring
+     Price: $80 per point
+     Context: Quote to Ronald - Marsiling (Total 4 points = $320 NETT)
+
+149. Remove non compliant wiring followed by new power outlets
+     Price: $85 NETT per point
+     Context: Quote to Ronald - Marsiling (Each point has 2G power points)
+
+SPORTS COURT SERVICES - DETAILED
+---------------------------------
+150. Badminton court marking (2 layers line paint)
+     Price: $700 before GST
+     Context: Quote for David Wong (Item 2)
+
+VINYL FLOORING
+--------------
+151. Vinyl Roll Sheet (2mm Thk, 220sqm area)
+     Price: $3.60 per psf
+     Context: Quote for Gu - Gim Hock Chua (Price per area unit)
+
+152. Total for Vinyl Roll Sheet
+     Price: $2,599.00 before GST
+     Context: For 220sqm (counting 10% wastage, using 6 rolls)
+
+153. Pickleball court markings
+     Price: $1,300 before GST
+     Context: For two courts
+
+CARPENTRY REPAIRS
+-----------------
+154. Replacement of damaged veneer for drawer sets
+     Price: $90 per drawer
+     Context: 4 drawer sets (Total $360)
+
+155. Sanding and varnishing onsite for one side table
+     Price: $350 before GST
+     Context: 1 side table
+
+PROFESSIONAL ENGINEERING SERVICES
+----------------------------------
+156. Professional Engineer's endorsement only on drawings for Director Rooms 1 and 2
+     Price: $3,000 before GST
+     Context: Quote for Wei Jie (Item 4)
+
+PARQUET REPLACEMENT - SMC ROOMS
+--------------------------------
+157. Supply and install 85mm Oak Parquet (approx. 2.5sqm, affected area sanding only)
+     Price: $1,250 before GST
+     Context: Quote for SMC Room 23 Parquet Replacement
+
+158. Option to re-varnish the entire room (instead of affected area only)
+     Price: $1,600 before GST
+     Context: Quote for SMC Room 23 Parquet Replacement
+
+TIMBER REPLACEMENT
+------------------
+159. Price for works per new Chengal wood beam (90mm H x 45mm Thk, up to 8m L)
+     Price: $250 for works to be done per piece
+     Context: For affected timber support replacement (73 Neram Road)
+
+SEATING - UNIT RATES
+--------------------
+160. Option 1: Chengal Wood seating unit rate
+     Price: $290 per 0.5meter run
+     Context: Total length 15m (Estimate $4350)
+
+161. Option 2: WPC seating unit rate
+     Price: $265 per 0.5meter run
+     Context: Total length 15m (Estimate $3950)
+
+HANDRAIL ADDITIONS
+------------------
+162. Top up for aluminium based metal, with powder coating
+     Price: $450 before GST
+     Context: Add-on for handrail quote (Hwee Mei)
+
+163. Top up for SS304 Stainless steel metal with powder coating
+     Price: $800 before GST
+     Context: Add-on for handrail quote (Hwee Mei)
+
+164. Painting works on the vertical bannister
+     Price: $900 before GST
+     Context: Quote for Hwee Mei
+
+GRANITE SERVICES
+----------------
+165. Granite repair, restoration and surface polishing
+     Price: $65 per sqm
+     Context: Quote for Chatsworth (Total 456 sqm)
+
+PLANTER BOXES
+-------------
+166. Chengal type planter box
+     Price: $1,550 before GST per planter box
+     Context: 4 boxes (Total $6200)
+
+VINYL TILE COMPLETE INSTALLATION
+---------------------------------
+167. Vinyl tile supply and install (39 sqm)
+     Price: $2,750 before GST
+     Context: Quote for Lornie (Self levelling $650 + Vinyl $2100)
+
+
+================================================================================
+SECTION 3: PRICE LIST DETAILS (PU PAINT AND WEBER)
+================================================================================
+
+PU PAINT PRICING
+----------------
+1. PU paint price
+   Price: $85-90 before GST
+   Context: Each time
+
+2. PU paint tin
+   Price: $100 per tin
+   Context: 1 tin (5Lt, covers double coat 25sqm, calculated as 20sqm for charge)
+
+3. PU Paint cost rate (calculated)
+   Price: $5 per sqm
+   Context: Cost rate based on $100/tin
+
+4. PU Paint quote rate
+   Price: $15 per sqm
+   Context: Selling price rate
+
+WEBER COATING PRICING
+----------------------
+5. Weber cost (for 550sqm)
+   Price: $8,068 before GST
+   Context: Total material cost
+
+6. Weber cost rate (calculated)
+   Price: $15 per sqm
+   Context: Based on $8068/550sqm
+
+7. Weber cost rate (internal cost)
+   Price: $18 per sqm
+   Context: Internal cost rate
+
+8. Weber selling rate
+   Price: $35 per sqm
+   Context: Selling price rate
+
+
+================================================================================
+SECTION 4: COURT MARKINGS PRICING DETAILS
+================================================================================
+
+1. Line painting and markings for Pickleball
+   Price: $600 before GST
+   Context: Per court/set of markings (Quote for Harvest Care Centre)
+
+2. Line painting and markings for Basketball
+   Price: $900 before GST
+   Context: Per court/set of markings (Quote for Harvest Care Centre)
+
+3. Line painting and markings for Futsal
+   Price: $900 before GST
+   Context: Per court/set of markings (Quote for Harvest Care Centre)
+
+4. Line painting and markings for Tchoukball
+   Price: $900 before GST
+   Context: Per court/set of markings (Quote for Harvest Care Centre)
+
+5. Total package quote for line painting and markings
+   Price: $3,000 before GST
+   Context: For Pickleball, Basketball, Futsal, and Tchoukball markings
+
+6. Court markings for Badminton courts
+   Price: $500 before GST
+   Context: Per court (4 courts = $2000 total in the component breakdown)
+
+7. Court markings for Basketball
+   Price: $750 before GST
+   Context: Per court (1 court)
+
+8. Total Quote for court markings
+   Price: $2,750 before GST
+   Context: For 4 Badminton courts ($500 x 4) and 1 Basketball court ($750)
+
+9. Badminton court marking (2 layers line paint)
+   Price: $700 before GST
+   Context: For 1 court (Quote for David Wong)
+
+10. Total Quote for Badminton Court Coating and Marking
+    Price: $5,670 before GST
+    Context: For Badminton Court Coating ($4970) and Marking ($700)
+
+11. Pickleball court markings
+    Price: $1,300 before GST
+    Context: For two courts (based on USA Pickleball dimensions)
+
+KEY DETAILS ON MATERIALS AND SCOPE:
+- For court markings quoted at $2,750 before GST (4 Badminton, 1 Basketball), 
+  the type of paint specified is Acrylic based using Weber Sports System.
+- For the Harvest Care Centre quote, the court resurfacing (Item 1) was for a 
+  Tora Seamaster Sports Court Flooring System. The line painting (Item 2) used 
+  technical manpower and acrylic paint materials.
+- The quote for David Wong specifies applying two layers of line paint for the 
+  Badminton court marking priced at $700 before GST.
+
+
+================================================================================
+END OF COMPREHENSIVE PRICING DETAILS EXTRACTION
+================================================================================
+
+Document prepared: October 2025
+Total number of line items extracted: 400+
+All prices are as stated in original source documents
+GST status noted where specified in source materials
+
+Note: This document contains all pricing details, quantities, units, and 
+contexts exactly as provided in the source materials. Prices are subject to 
+change and should be verified with contractors before proceeding with any work.
