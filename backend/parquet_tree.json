@@ -1,0 +1,102 @@
+{
+  "service_name": "parquet_sanding_varnishing",
+  "display_name": "Parquet Sanding & Varnishing",
+  "description": "Professional parquet floor sanding and varnishing service",
+  "tree_config": {
+    "questions": [
+      {
+        "id": "area_service_type",
+        "question": "What is the area service type?",
+        "type": "choice",
+        "choices": [
+          "Residential (Landed Housing)",
+          "Condominium / Apartment",
+          "Commercial",
+          "Industrial",
+          "Government Projects"
+        ],
+        "required": true
+      },
+      {
+        "id": "total_area",
+        "question": "What is the total area of parquet flooring to be sanded and varnished? (in square meters)",
+        "type": "number",
+        "required": true
+      },
+      {
+        "id": "room_details",
+        "question": "How many rooms are involved, and what are the room types with individual room areas? (e.g., master bed 20sqm, bedroom 15sqm, living room 30sqm)",
+        "type": "text",
+        "required": true
+      },
+      {
+        "id": "staircase_sets",
+        "question": "How many staircase sets are involved?",
+        "type": "number",
+        "required": false
+      },
+      {
+        "id": "finish_type",
+        "question": "Do you want a matte, glossy, or satin finish?",
+        "type": "choice",
+        "choices": [
+          "Matte",
+          "Glossy",
+          "Satin"
+        ],
+        "required": false
+      },
+      {
+        "id": "varnish_type",
+        "question": "What type of varnish do you prefer?",
+        "type": "choice",
+        "choices": [
+          "Oil-Based (Melamine)",
+          "Water-Based",
+          "Polyurethane",
+          "Acrylic",
+          "Spar"
+        ],
+        "required": true
+      },
+      {
+        "id": "repair_work",
+        "question": "Do you need any repair work? If yes, please explain what needs to be repaired.",
+        "type": "text",
+        "required": false
+      },
+      {
+        "id": "furniture_moving",
+        "question": "Do you need furniture moving service included?",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "id": "work_schedule",
+        "question": "Preferred work schedule (day/night)?",
+        "type": "choice",
+        "choices": [
+          "Daytime",
+          "Nighttime"
+        ],
+        "required": true
+      },
+      {
+        "id": "site_address",
+        "question": "What is the site address for the work?",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "start_question": "area_service_type",
+    "pricing_rules": {
+      "search_query": "parquet sanding varnishing {area_service_type} {total_area} sqm {varnish_type}",
+      "calculation_type": "per_sqm",
+      "components": [
+        "base_rate_per_sqm",
+        "staircase_additional",
+        "furniture_moving_fee"
+      ]
+    }
+  }
+}
