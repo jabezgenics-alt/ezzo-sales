@@ -21,7 +21,6 @@ backend/.env
 backend/chroma_db/
 
 # Uploads
-backend/uploads/
 
 # Node
 node_modules/
