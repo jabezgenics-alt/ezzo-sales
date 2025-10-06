@@ -437,6 +437,9 @@ def reprocess_all_documents(
             processed_count += 1
             print(f"Reprocessed document {document.id}: {document.original_filename}")
             
+            # Commit after each document to avoid timeout
+            db.commit()
+            
         except Exception as e:
             print(f"Error reprocessing document {document.id}: {str(e)}")
             failed_docs.append({
@@ -444,9 +447,8 @@ def reprocess_all_documents(
                 'filename': document.original_filename,
                 'error': str(e)
             })
-    
-    # Commit any database changes
-    db.commit()
+            # Rollback on error to ensure clean state for next document
+            db.rollback()
     
     response = {
         "message": f"Reprocessed {processed_count} documents successfully",

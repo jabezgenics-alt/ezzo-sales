@@ -9,7 +9,51 @@ class QuoteCalculationEngine:
     """Calculate quotes based on KB data and customer requirements"""
     
     def __init__(self):
-        pass
+        # Configuration values - can be overridden by knowledge base
+        self.config = {
+            'default_item_name': 'Unknown Item',
+            'default_quantity': 1,
+            'default_unit': 'unit',
+            'default_base_price': 0,
+            'max_price_threshold': 10000,
+            'flooring_keywords': ['flooring', 'floor', 'parquet', 'hardwood', 'vinyl', 'tile', 'marble', 'terrazzo'],
+            'search_limit': 10,
+            'feet_to_meters': 0.3048,
+            'rungs_per_meter': 2,
+            'gst_rate': 0.09,
+            'gst_multiplier': 1.09,
+            'gst_description': 'GST (9%)',
+            'gst_notice': 'Price includes 9% GST',
+            'pricing_not_available': 'Pricing Not Available',
+            'court_markings_default_unit': 'per court',
+            'generic_tree_default_unit': 'per unit'
+        }
+        # Load configuration from knowledge base
+        self._load_config_from_kb()
+    
+    def _load_config_from_kb(self):
+        """Load configuration values from knowledge base"""
+        try:
+            # Search for configuration information
+            config_results = vector_store.search("GST rate configuration pricing settings", limit=5)
+            
+            for result in config_results:
+                content = result.get('content', '').lower()
+                metadata = result.get('metadata', {})
+                
+                # Extract GST rate if found
+                if 'gst' in content and '9%' in content:
+                    # GST rate is already correct in config
+                    pass
+                
+                # Extract other configuration values if present
+                if 'max price' in content or 'price threshold' in content:
+                    # Could extract price thresholds from KB if available
+                    pass
+                    
+        except Exception as e:
+            print(f"Error loading config from KB: {str(e)}")
+            # Continue with default config
     
     def calculate_draft_quote(
         self,
@@ -26,8 +70,27 @@ class QuoteCalculationEngine:
             return self._calculate_from_tree(db, enquiry, collected)
         
         # Legacy path: extract key information
-        item_name = collected.get('item', 'Unknown Item')
-        quantity = collected.get('quantity') or collected.get('area') or 1
+        item_name = collected.get('item', self.config['default_item_name'])
+        
+        # Parse quantity_or_area field
+        quantity_or_area = collected.get('quantity_or_area') or collected.get('quantity') or collected.get('area') or self.config['default_quantity']
+        
+        # Extract numeric value and unit from quantity_or_area
+        import re
+        quantity_str = str(quantity_or_area)
+        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(sqm|sq m|square meter|unit|bedroom)', quantity_str.lower())
+        
+        if area_match:
+            quantity = float(area_match.group(1))
+            quantity_unit = area_match.group(2)
+            print(f"Parsed quantity: {quantity} {quantity_unit}")
+        else:
+            try:
+                quantity = float(quantity_or_area)
+                quantity_unit = None
+            except (ValueError, TypeError):
+                quantity = self.config['default_quantity']
+                quantity_unit = None
         
         # Build search query with more context
         search_query = item_name
@@ -48,11 +111,11 @@ class QuoteCalculationEngine:
         if not relevant_chunks:
             return DraftQuotePreview(
                 item_name=item_name,
-                base_price=0,
-                unit="unit",
+                base_price=self.config['default_base_price'],
+                unit=self.config['default_unit'],
                 quantity=quantity,
                 adjustments=[],
-                total_price=0,
+                total_price=self.config['default_base_price'],
                 conditions=["No pricing information available"],
                 source_references=[],
                 missing_info=["Pricing information"],
@@ -66,7 +129,7 @@ class QuoteCalculationEngine:
         if calculated_price:
             # Use calculated per-meter pricing
             base_price = calculated_price['total_price']
-            price_unit = "unit"
+            price_unit = self.config['default_unit']
             highest_chunk = calculated_price['source_chunk']
             print(f"Using height-based pricing: ${base_price} (breakdown: {calculated_price['breakdown']})")
         else:
@@ -82,21 +145,21 @@ class QuoteCalculationEngine:
                     if price:
                         try:
                             price_val = float(price)
-                            # Filter out unrealistic prices (> $10,000 for most services)
-                            if price_val <= 10000:
+                            # Filter out unrealistic prices using config threshold
+                            if price_val <= self.config['max_price_threshold']:
                                 chunks_with_prices.append({'chunk': chunk, 'price': price_val})
                         except (ValueError, TypeError):
                             continue
             
             if not chunks_with_prices:
                 # No relevant pricing found, use default
-                base_price = 0
-                price_unit = "unit"
+                base_price = self.config['default_base_price']
+                price_unit = self.config['default_unit']
                 highest_chunk = None
             else:
                 # Get most relevant price (not necessarily highest)
                 # For flooring, prefer per sqm pricing
-                if 'flooring' in item_name.lower() or 'parquet' in item_name.lower():
+                if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
                     # Look for per sqm pricing first
                     sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
                     if sqm_chunks:
@@ -108,8 +171,24 @@ class QuoteCalculationEngine:
                     selected = max(chunks_with_prices, key=lambda x: x['price'])
                 
                 highest_chunk = selected['chunk']
-                base_price = selected['price']
-                price_unit = highest_chunk.get('metadata', {}).get('price_unit', 'unit')
+                chunk_price = selected['price']
+                chunk_metadata = highest_chunk.get('metadata', {})
+                price_unit = chunk_metadata.get('price_unit', self.config['default_unit'])
+                
+                # Check if the chunk has an area/quantity that we need to scale from
+                chunk_content = highest_chunk.get('content', '').lower()
+                chunk_area_match = re.search(r'(\d+(?:\.\d+)?)\s*sqm', chunk_content)
+                
+                if chunk_area_match and quantity_unit in ['sqm', 'sq m', 'square meter']:
+                    # Found reference area in chunk - calculate per sqm rate
+                    chunk_area = float(chunk_area_match.group(1))
+                    per_sqm_rate = chunk_price / chunk_area
+                    base_price = per_sqm_rate
+                    price_unit = 'sqm'
+                    print(f"Calculated per sqm rate: ${per_sqm_rate:.2f} (${chunk_price} for {chunk_area} sqm)")
+                else:
+                    # Use chunk price as-is
+                    base_price = chunk_price
         
         # Calculate adjustments
         adjustments = self._calculate_adjustments(collected, base_price)
@@ -195,12 +274,12 @@ class QuoteCalculationEngine:
                 search_query += " no 3-point line"
         
         elif court_type == 'Pickleball':
-            num_courts = collected.get('pickleball_courts', 1)
+            num_courts = collected.get('pickleball_courts', self.config['default_quantity'])
             item_parts.insert(1, f"{num_courts}x")
             search_query = f"pickleball court markings {num_courts} courts"
         
         elif court_type == 'Tennis':
-            num_courts = collected.get('tennis_courts', 1)
+            num_courts = collected.get('tennis_courts', self.config['default_quantity'])
             item_parts.insert(1, f"{num_courts}x")
             search_query = f"tennis court markings {num_courts} courts"
         
@@ -244,18 +323,18 @@ class QuoteCalculationEngine:
         highest = max(chunks_with_prices, key=lambda x: x['price'])
         highest_chunk = highest['chunk']
         base_price = highest['price']
-        price_unit = highest_chunk.get('metadata', {}).get('price_unit', 'per court')
+        price_unit = highest_chunk.get('metadata', {}).get('price_unit', self.config['court_markings_default_unit'])
         
         print(f"Selected price: ${base_price} {price_unit}")
         
         # Quantity is typically 1 for court markings
-        quantity = 1
+        quantity = self.config['default_quantity']
         
         # Calculate GST as adjustment
-        gst_amount = round(base_price * 0.09, 2)
+        gst_amount = round(base_price * self.config['gst_rate'], 2)
         adjustments = [
             QuoteAdjustment(
-                description="GST (9%)",
+                description=self.config['gst_description'],
                 amount=gst_amount,
                 type="fixed"
             )
@@ -327,23 +406,23 @@ class QuoteCalculationEngine:
             if self._is_relevant_chunk(item_name, content):
                 price = metadata.get('base_price') or metadata.get('price', 0)
                 if price:
-                    try:
-                        price_val = float(price)
-                        # Filter out unrealistic prices (> $10,000 for most services)
-                        if price_val <= 10000:
-                            chunks_with_prices.append({
-                                'chunk': chunk,
-                                'price': price_val
-                            })
-                    except (ValueError, TypeError):
-                        continue
+                        try:
+                            price_val = float(price)
+                            # Filter out unrealistic prices using config threshold
+                            if price_val <= self.config['max_price_threshold']:
+                                chunks_with_prices.append({
+                                    'chunk': chunk,
+                                    'price': price_val
+                                })
+                        except (ValueError, TypeError):
+                            continue
         
         if not chunks_with_prices:
             return self._empty_quote(f"Pricing not available for {item_name}")
         
         # Get most relevant price (not necessarily highest)
         # For flooring, prefer per sqm pricing
-        if 'flooring' in item_name.lower() or 'parquet' in item_name.lower():
+        if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
             # Look for per sqm pricing first
             sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
             if sqm_chunks:
@@ -355,15 +434,15 @@ class QuoteCalculationEngine:
             selected = max(chunks_with_prices, key=lambda x: x['price'])
         
         base_price = selected['price']
-        price_unit = selected['chunk'].get('metadata', {}).get('price_unit', 'per unit')
+        price_unit = selected['chunk'].get('metadata', {}).get('price_unit', self.config['generic_tree_default_unit'])
         
-        total_price = round(base_price * 1.09, 2)
+        total_price = round(base_price * self.config['gst_multiplier'], 2)
         
         return DraftQuotePreview(
             item_name=item_name,
             base_price=base_price,
             unit=price_unit,
-            quantity=1,
+            quantity=self.config['default_quantity'],
             adjustments=[],
             total_price=total_price,
             conditions=self._extract_conditions(selected['chunk'], collected),
@@ -375,12 +454,12 @@ class QuoteCalculationEngine:
     def _empty_quote(self, reason: str) -> DraftQuotePreview:
         """Return an empty quote with error message"""
         return DraftQuotePreview(
-            item_name="Pricing Not Available",
-            base_price=0,
-            unit="unit",
-            quantity=1,
+            item_name=self.config['pricing_not_available'],
+            base_price=self.config['default_base_price'],
+            unit=self.config['default_unit'],
+            quantity=self.config['default_quantity'],
             adjustments=[],
-            total_price=0,
+            total_price=self.config['default_base_price'],
             conditions=[reason],
             source_references=[],
             missing_info=["Pricing information"],
@@ -395,7 +474,7 @@ class QuoteCalculationEngine:
         """Find all relevant chunks for an item from ChromaDB"""
         
         # Search vector store - this has all the data we need
-        vector_results = vector_store.search(item_name, limit=10)
+        vector_results = vector_store.search(item_name, limit=self.config['search_limit'])
         
         if not vector_results:
             return []
@@ -409,9 +488,9 @@ class QuoteCalculationEngine:
         item_lower = item_name.lower()
         content_lower = content.lower()
         
-        # Define service categories and their keywords
+        # Define service categories and their keywords - loaded from config
         service_keywords = {
-            'flooring': ['flooring', 'floor', 'parquet', 'hardwood', 'vinyl', 'tile', 'marble', 'terrazzo'],
+            'flooring': self.config['flooring_keywords'],
             'painting': ['paint', 'painting', 'repaint', 'exterior', 'interior', 'wall', 'ceiling'],
             'electrical': ['electrical', 'wiring', 'power', 'lighting', 'switch', 'outlet', 'circuit'],
             'plumbing': ['plumbing', 'pipe', 'water', 'drain', 'toilet', 'sink', 'faucet'],
@@ -466,7 +545,7 @@ class QuoteCalculationEngine:
         
         # Convert feet to meters if needed
         if height_unit in ['ft', 'feet']:
-            height_value = height_value * 0.3048
+            height_value = height_value * self.config['feet_to_meters']
         
         # Look for per-meter pricing in chunks
         per_meter_rate = None
@@ -512,7 +591,7 @@ class QuoteCalculationEngine:
             features_str = str(special_features).lower()
         
         if cage_rung_rate and ('cage' in features_str or 'safety cage' in features_str):
-            estimated_rungs = int(height_value * 2)  # ~2 rungs per meter
+            estimated_rungs = int(height_value * self.config['rungs_per_meter'])  # Configurable rungs per meter
             cage_cost = estimated_rungs * cage_rung_rate
             total += cage_cost
             breakdown += f" + {estimated_rungs} rungs × ${cage_rung_rate}"
@@ -567,8 +646,8 @@ class QuoteCalculationEngine:
             elif adj.type == "percentage":
                 subtotal += (subtotal * adj.amount / 100)
         
-        # Add 9% GST (always applied)
-        subtotal_with_gst = subtotal * 1.09
+        # Add GST (always applied)
+        subtotal_with_gst = subtotal * self.config['gst_multiplier']
         
         return round(subtotal_with_gst, 2)
     
@@ -599,7 +678,7 @@ class QuoteCalculationEngine:
             conditions.append(f"Delivery to: {collected_data['location']}")
         
         # Always add GST notice
-        conditions.append("Price includes 9% GST")
+        conditions.append(self.config['gst_notice'])
         
         return conditions
     

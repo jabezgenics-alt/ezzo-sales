@@ -57,7 +57,15 @@ When customer explicitly wants a quote, ask for:
 3. Location (affects delivery and pricing)
 4. Any special requirements
 
-Only indicate draft quote is ready when customer has explicitly requested pricing and you have collected the necessary information."""
+CRITICAL - WHEN TO CALL draft_ready FUNCTION:
+- Once you have: service type, quantity/area, and location
+- When customer says "confirm", "proceed", "yes", or similar confirmation
+- When all necessary information is collected
+- DO NOT just provide a summary - CALL the draft_ready function
+- The draft_ready function will generate the actual quote
+- After calling draft_ready, the system will show the quote to the customer
+
+Remember: Just telling the customer about the quote is NOT enough - you MUST call the draft_ready function to generate it."""
     
     def process_enquiry(
         self,
@@ -152,13 +160,13 @@ Only indicate draft quote is ready when customer has explicitly requested pricin
                     },
                     {
                         "name": "draft_ready",
-                        "description": "Indicate that enough information has been collected to prepare a draft quote",
+                        "description": "CALL THIS FUNCTION when you have collected: service type, quantity/area, and location. This function generates the actual draft quote for the customer. You MUST call this when customer confirms or when all required information is available.",
                         "parameters": {
                             "type": "object",
                             "properties": {
                                 "summary": {
                                     "type": "string",
-                                    "description": "Summary of collected information"
+                                    "description": "Brief summary of the quote details (e.g., 'Vinyl flooring for 31 sqm at Singapore Bedok 42 Street')"
                                 }
                             },
                             "required": ["summary"]
@@ -320,13 +328,13 @@ Only indicate draft quote is ready when customer has explicitly requested pricin
                     },
                     {
                         "name": "draft_ready",
-                        "description": "Indicate that enough information has been collected to prepare a draft quote",
+                        "description": "CALL THIS FUNCTION when you have collected: service type, quantity/area, and location. This function generates the actual draft quote for the customer. You MUST call this when customer confirms or when all required information is available.",
                         "parameters": {
                             "type": "object",
                             "properties": {
                                 "summary": {
                                     "type": "string",
-                                    "description": "Summary of collected information"
+                                    "description": "Brief summary of the quote details (e.g., 'Vinyl flooring for 31 sqm at Singapore Bedok 42 Street')"
                                 }
                             },
                             "required": ["summary"]
@@ -758,16 +766,17 @@ Only indicate draft quote is ready when customer has explicitly requested pricin
                         "content": """Extract key information from this customer conversation.
 
 Return a JSON object with these fields:
-- item: Main product/service (e.g., "cat ladder", "parquet flooring", "flagpoles")
-- quantity: Number of units or area (default to 1 if not specified)
+- item: Main product/service (e.g., "cat ladder", "parquet flooring", "vinyl flooring", "flagpoles")
+- quantity_or_area: Number of units or area (e.g., "21 sqm", "2 units", "100 sqm")
 - location: Location/address
-- material: Material type if mentioned (e.g., "aluminium", "steel", "stainless steel")
+- material: Material type if mentioned (e.g., "aluminium", "steel", "stainless steel", "vinyl")
 - height: Height specification if mentioned (e.g., "5m", "10m", "31 feet")
-- special_features: Array of special features if mentioned (e.g., ["safety cage", "access door"])
+- special_features: Array of special features if mentioned (e.g., ["safety cage", "access door", "rubber underlay", "plywood"])
 
 Examples:
-- "2 aluminum cat ladders, 5m high, with safety cage" → {"item": "cat ladder", "quantity": 2, "material": "aluminium", "height": "5m", "special_features": ["safety cage"]}
-- "1 cat ladder 10m high with cage and door" → {"item": "cat ladder", "quantity": 1, "height": "10m", "special_features": ["safety cage", "access door"]}
+- "2 aluminum cat ladders, 5m high, with safety cage" → {"item": "cat ladder", "quantity_or_area": "2 units", "material": "aluminium", "height": "5m", "special_features": ["safety cage"]}
+- "vinyl flooring for 21 sqm master bedroom" → {"item": "vinyl flooring", "quantity_or_area": "21 sqm", "special_features": ["rubber underlay", "plywood"]}
+- "parquet flooring installation 100 sqm" → {"item": "parquet flooring", "quantity_or_area": "100 sqm"}
 
 Only include fields that were clearly mentioned in the conversation."""
                     },
@@ -804,8 +813,12 @@ Return JSON: {"wants_quote": true/false}
 The user wants a quote if they:
 - Explicitly ask for a "quote" or "quotation"
 - Say "I need a quote for..." with specific service details
+- Say "I'd like a quote" or "I like a quote" or "id like a quote"
+- Say "confirm" after receiving pricing information
+- Say "proceed" or "go ahead" after receiving pricing information
 - Clearly specify the service type AND request pricing
 - Want to get a formal quotation
+- Ask to "finalize" or "complete" the quote
 
 The user does NOT want a quote if they:
 - Are just asking general questions
@@ -822,6 +835,9 @@ Examples:
 - "Tell me about parquet flooring" → {"wants_quote": false}
 - "How much for 3 bedroom parquet" → {"wants_quote": false} (needs clarification)
 - "I need a quote for parquet sanding and varnishing" → {"wants_quote": true}
+- "okay id like a quote" → {"wants_quote": true}
+- "confirm" → {"wants_quote": true}
+- "proceed" → {"wants_quote": true}
 - "Hello" → {"wants_quote": false}"""
                     },
                     {
@@ -840,7 +856,7 @@ Examples:
         except Exception as e:
             print(f"Error checking quote intent: {str(e)}")
             # Fallback: check for explicit quote keywords only
-            quote_keywords = ['quote', 'quotation']
+            quote_keywords = ['quote', 'quotation', 'confirm', 'proceed', 'finalize', 'complete']
             message_lower = message.lower()
             return any(keyword in message_lower for keyword in quote_keywords)
     
