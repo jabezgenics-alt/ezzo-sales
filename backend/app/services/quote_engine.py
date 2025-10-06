@@ -70,24 +70,45 @@ class QuoteCalculationEngine:
             highest_chunk = calculated_price['source_chunk']
             print(f"Using height-based pricing: ${base_price} (breakdown: {calculated_price['breakdown']})")
         else:
-            # Fall back to standard highest price logic
+            # Fall back to smart pricing logic - filter by relevance first
             chunks_with_prices = []
             for chunk in relevant_chunks:
                 metadata = chunk.get('metadata', {})
-                price = metadata.get('base_price') or metadata.get('price', 0)
-                if price:
-                    chunks_with_prices.append({'chunk': chunk, 'price': float(price)})
+                content = chunk.get('content', '').lower()
+                
+                # Only consider chunks that are actually relevant to the item
+                if self._is_relevant_chunk(item_name, content):
+                    price = metadata.get('base_price') or metadata.get('price', 0)
+                    if price:
+                        try:
+                            price_val = float(price)
+                            # Filter out unrealistic prices (> $10,000 for most services)
+                            if price_val <= 10000:
+                                chunks_with_prices.append({'chunk': chunk, 'price': price_val})
+                        except (ValueError, TypeError):
+                            continue
             
             if not chunks_with_prices:
-                # No pricing found, use default
+                # No relevant pricing found, use default
                 base_price = 0
                 price_unit = "unit"
                 highest_chunk = None
             else:
-                # Get highest price
-                highest = max(chunks_with_prices, key=lambda x: x['price'])
-                highest_chunk = highest['chunk']
-                base_price = highest['price']
+                # Get most relevant price (not necessarily highest)
+                # For flooring, prefer per sqm pricing
+                if 'flooring' in item_name.lower() or 'parquet' in item_name.lower():
+                    # Look for per sqm pricing first
+                    sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
+                    if sqm_chunks:
+                        selected = max(sqm_chunks, key=lambda x: x['price'])
+                    else:
+                        selected = max(chunks_with_prices, key=lambda x: x['price'])
+                else:
+                    # For other services, use highest relevant price
+                    selected = max(chunks_with_prices, key=lambda x: x['price'])
+                
+                highest_chunk = selected['chunk']
+                base_price = selected['price']
                 price_unit = highest_chunk.get('metadata', {}).get('price_unit', 'unit')
         
         # Calculate adjustments
@@ -296,26 +317,45 @@ class QuoteCalculationEngine:
         if not relevant_chunks:
             return self._empty_quote(f"No pricing found for {item_name}")
         
-        # Similar logic as court markings
+        # Apply same relevance filtering as main quote engine
         chunks_with_prices = []
         for chunk in relevant_chunks:
             metadata = chunk.get('metadata', {})
-            price = metadata.get('base_price') or metadata.get('price', 0)
-            if price:
-                try:
-                    chunks_with_prices.append({
-                        'chunk': chunk,
-                        'price': float(price)
-                    })
-                except (ValueError, TypeError):
-                    continue
+            content = chunk.get('content', '').lower()
+            
+            # Only consider chunks that are actually relevant to the item
+            if self._is_relevant_chunk(item_name, content):
+                price = metadata.get('base_price') or metadata.get('price', 0)
+                if price:
+                    try:
+                        price_val = float(price)
+                        # Filter out unrealistic prices (> $10,000 for most services)
+                        if price_val <= 10000:
+                            chunks_with_prices.append({
+                                'chunk': chunk,
+                                'price': price_val
+                            })
+                    except (ValueError, TypeError):
+                        continue
         
         if not chunks_with_prices:
             return self._empty_quote(f"Pricing not available for {item_name}")
         
-        highest = max(chunks_with_prices, key=lambda x: x['price'])
-        base_price = highest['price']
-        price_unit = highest['chunk'].get('metadata', {}).get('price_unit', 'per unit')
+        # Get most relevant price (not necessarily highest)
+        # For flooring, prefer per sqm pricing
+        if 'flooring' in item_name.lower() or 'parquet' in item_name.lower():
+            # Look for per sqm pricing first
+            sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
+            if sqm_chunks:
+                selected = max(sqm_chunks, key=lambda x: x['price'])
+            else:
+                selected = max(chunks_with_prices, key=lambda x: x['price'])
+        else:
+            # For other services, use highest relevant price
+            selected = max(chunks_with_prices, key=lambda x: x['price'])
+        
+        base_price = selected['price']
+        price_unit = selected['chunk'].get('metadata', {}).get('price_unit', 'per unit')
         
         total_price = round(base_price * 1.09, 2)
         
@@ -326,7 +366,7 @@ class QuoteCalculationEngine:
             quantity=1,
             adjustments=[],
             total_price=total_price,
-            conditions=self._extract_conditions(highest['chunk'], collected),
+            conditions=self._extract_conditions(selected['chunk'], collected),
             source_references=[],
             missing_info=[],
             can_submit=True
@@ -362,6 +402,47 @@ class QuoteCalculationEngine:
         
         # Return ChromaDB results directly (they have all metadata)
         return vector_results
+    
+    def _is_relevant_chunk(self, item_name: str, content: str) -> bool:
+        """Check if a chunk is actually relevant to the requested item"""
+        
+        item_lower = item_name.lower()
+        content_lower = content.lower()
+        
+        # Define service categories and their keywords
+        service_keywords = {
+            'flooring': ['flooring', 'floor', 'parquet', 'hardwood', 'vinyl', 'tile', 'marble', 'terrazzo'],
+            'painting': ['paint', 'painting', 'repaint', 'exterior', 'interior', 'wall', 'ceiling'],
+            'electrical': ['electrical', 'wiring', 'power', 'lighting', 'switch', 'outlet', 'circuit'],
+            'plumbing': ['plumbing', 'pipe', 'water', 'drain', 'toilet', 'sink', 'faucet'],
+            'construction': ['construction', 'renovation', 'renovate', 'build', 'install', 'installation']
+        }
+        
+        # Identify the service category from item name
+        item_category = None
+        for category, keywords in service_keywords.items():
+            if any(keyword in item_lower for keyword in keywords):
+                item_category = category
+                break
+        
+        if not item_category:
+            # If we can't categorize, be more lenient
+            return True
+        
+        # Check if content matches the service category
+        category_keywords = service_keywords[item_category]
+        content_matches_category = any(keyword in content_lower for keyword in category_keywords)
+        
+        # Also check for obvious mismatches
+        other_categories = [cat for cat in service_keywords.keys() if cat != item_category]
+        content_matches_other = any(
+            any(keyword in content_lower for keyword in service_keywords[cat]) 
+            for cat in other_categories
+        )
+        
+        # Relevant if it matches the category OR doesn't strongly match other categories
+        # This makes the filter more lenient to avoid $0 pricing
+        return content_matches_category or not content_matches_other
     
     def _calculate_height_based_pricing(
         self,

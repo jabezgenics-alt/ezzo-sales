@@ -1,11 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import logging
+import warnings
 from app.config import settings
 from app.database import init_db, get_db
 from app.models import User, UserRole
 from app.auth import create_user
 from app.routers import auth, documents, enquiries, admin, knowledge, decision_trees
+
+# Suppress ChromaDB telemetry warnings
+warnings.filterwarnings('ignore', message='.*telemetry.*')
+logging.getLogger('chromadb').setLevel(logging.ERROR)
 
 
 @asynccontextmanager

@@ -17,32 +17,47 @@ class AIAssistant:
         self.system_prompt = """You are a professional sales assistant for Ezzo Sales, a quotation system.
 
 Your role:
-1. Help customers get accurate quotes by asking clarifying questions
-2. Only ask questions that will affect pricing or conditions
-3. Use information from the knowledge base to provide accurate quotes
+1. Help customers with general questions about services and products using the knowledge base
+2. Provide helpful information about Ezzo Sales offerings
+3. Only start quote collection when the customer explicitly asks for pricing/quotes
 4. Always be polite, professional, and helpful
 
 IMPORTANT - Follow this order:
-1. FIRST - If the customer hasn't specified what service/product they need, ask them what service they're interested in
-2. THEN - Ask for specific details about that service (area, location, materials, etc.)
-3. FINALLY - Once you have all necessary information, prepare a draft quote
+1. FIRST - Answer general questions using the knowledge base information
+2. Provide helpful information about services, products, and capabilities
+3. ONLY when customer explicitly asks for a quote/price, then start collecting quote information
+4. Use the knowledge base to provide accurate information
+
+CRITICAL GST INFORMATION:
+- Singapore GST rate is 9% (NOT 8%)
+- All prices are quoted before GST
+- GST is calculated as 9% of the quoted price
+- When providing pricing information, always mention "before GST" and that GST is 9%
+
+IMPORTANT SERVICE CLARIFICATION:
+- When customers ask about pricing for services that could have multiple types, ALWAYS clarify what specific service they need first
+- Don't assume the service type - ask for clarification before providing pricing
+- Use knowledge base information to provide accurate pricing for the correct service
+- Even if customer asks "how much", first clarify the service type before providing pricing
+- This applies to any service that has multiple variants (installation, repair, maintenance, etc.)
 
 Guidelines:
-- Ask ONE question at a time
-- Make questions specific and easy to answer
-- Validate answers before moving forward
+- Be conversational and helpful
+- Use knowledge base information to answer questions accurately
+- Don't push for quotes unless customer asks
+- If customer asks for a quote, then ask clarifying questions one at a time
 - Never make up prices - always use information from the knowledge base
-- If the customer says something vague like "I need a quote", ask them what type of service or product they need first
+- Focus on being helpful and informative first
+- ALWAYS use 9% GST rate for Singapore (never 8%)
+- ALWAYS clarify service type before providing pricing
 
-Common questions to ask AFTER knowing the service:
-1. Exact area/quantity needed
-2. Location (affects delivery and pricing)
-3. Furniture shifting required? (affects labor costs)
-4. Type of materials/finish (water-based vs oil-based, etc.)
-5. Day or night job? (affects labor rates)
-6. Any special conditions or requirements?
+When customer explicitly wants a quote, ask for:
+1. What specific service/product they need
+2. Exact area/quantity needed
+3. Location (affects delivery and pricing)
+4. Any special requirements
 
-When you have enough information, indicate that a draft quote is ready."""
+Only indicate draft quote is ready when customer has explicitly requested pricing and you have collected the necessary information."""
     
     def process_enquiry(
         self,
@@ -58,19 +73,21 @@ When you have enough information, indicate that a draft quote is ready."""
         if enquiry.service_tree_id:
             tree = db.query(DecisionTree).filter(DecisionTree.id == enquiry.service_tree_id).first()
         
-        # If no tree assigned yet, try to match one
+        # If no tree assigned yet, check if user explicitly wants a quote
         if not tree:
             # Build message to match against
             message_to_match = enquiry.initial_message
             if user_message:
                 message_to_match = message_to_match + " " + user_message
             
-            tree = tree_engine.match_service(db, message_to_match)
-            if tree:
-                # Assign the tree to the enquiry
-                enquiry.service_tree_id = tree.id
-                db.commit()
-                print(f"Matched service tree: {tree.service_name} (ID: {tree.id})")
+            # Only match tree if user explicitly wants a quote
+            if self._user_wants_quote(message_to_match):
+                tree = tree_engine.match_service(db, message_to_match)
+                if tree:
+                    # Assign the tree to the enquiry
+                    enquiry.service_tree_id = tree.id
+                    db.commit()
+                    print(f"Matched service tree: {tree.service_name} (ID: {tree.id})")
         
         # If we have a decision tree, use tree-based questioning
         if tree:
@@ -94,13 +111,17 @@ When you have enough information, indicate that a draft quote is ready."""
             kb_text = "\n\nRelevant information from knowledge base:\n" + kb_context
             messages[0]["content"] += kb_text
         
+        # Check if this is a general question or quote request
+        message_to_check = enquiry.initial_message
+        if user_message:
+            message_to_check = message_to_check + " " + user_message
+        is_quote_request = self._user_wants_quote(message_to_check)
+        
         # Get AI response
         try:
-            response = self.client.chat.completions.create(
-                model=settings.OPENAI_MODEL,
-                messages=messages,
-                temperature=0.7,
-                functions=[
+            # Only use function calling for quote requests
+            if is_quote_request:
+                functions = [
                     {
                         "name": "ask_question",
                         "description": "Ask the customer a clarifying question",
@@ -144,6 +165,14 @@ When you have enough information, indicate that a draft quote is ready."""
                         }
                     }
                 ]
+            else:
+                functions = None
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=messages,
+                temperature=0.7,
+                functions=functions
             )
             
             choice = response.choices[0]
@@ -206,19 +235,21 @@ When you have enough information, indicate that a draft quote is ready."""
         if enquiry.service_tree_id:
             tree = db.query(DecisionTree).filter(DecisionTree.id == enquiry.service_tree_id).first()
         
-        # If no tree assigned yet, try to match one
+        # If no tree assigned yet, check if user explicitly wants a quote
         if not tree:
             # Build message to match against
             message_to_match = enquiry.initial_message
             if user_message:
                 message_to_match = message_to_match + " " + user_message
             
-            tree = tree_engine.match_service(db, message_to_match)
-            if tree:
-                # Assign the tree to the enquiry
-                enquiry.service_tree_id = tree.id
-                db.commit()
-                print(f"Matched service tree: {tree.service_name} (ID: {tree.id})")
+            # Only match tree if user explicitly wants a quote
+            if self._user_wants_quote(message_to_match):
+                tree = tree_engine.match_service(db, message_to_match)
+                if tree:
+                    # Assign the tree to the enquiry
+                    enquiry.service_tree_id = tree.id
+                    db.commit()
+                    print(f"Matched service tree: {tree.service_name} (ID: {tree.id})")
         
         # If we have a decision tree, use tree-based questioning
         if tree:
@@ -248,14 +279,17 @@ When you have enough information, indicate that a draft quote is ready."""
             kb_text = "\n\nRelevant information from knowledge base:\n" + kb_context
             messages[0]["content"] += kb_text
         
+        # Check if this is a general question or quote request
+        message_to_check = enquiry.initial_message
+        if user_message:
+            message_to_check = message_to_check + " " + user_message
+        is_quote_request = self._user_wants_quote(message_to_check)
+        
         # Get streaming AI response
         try:
-            response = self.client.chat.completions.create(
-                model=settings.OPENAI_MODEL,
-                messages=messages,
-                temperature=0.7,
-                stream=True,
-                functions=[
+            # Only use function calling for quote requests
+            if is_quote_request:
+                functions = [
                     {
                         "name": "ask_question",
                         "description": "Ask the customer a clarifying question",
@@ -299,6 +333,15 @@ When you have enough information, indicate that a draft quote is ready."""
                         }
                     }
                 ]
+            else:
+                functions = None
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=messages,
+                temperature=0.7,
+                stream=True,
+                functions=functions
             )
             
             full_content = ""
@@ -745,6 +788,61 @@ Only include fields that were clearly mentioned in the conversation."""
             import traceback
             traceback.print_exc()
             return {}
+    
+    def _user_wants_quote(self, message: str) -> bool:
+        """Check if user explicitly wants a quote using AI"""
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Determine if the user explicitly wants a quote or pricing information.
+
+Return JSON: {"wants_quote": true/false}
+
+The user wants a quote if they:
+- Explicitly ask for a "quote" or "quotation"
+- Say "I need a quote for..." with specific service details
+- Clearly specify the service type AND request pricing
+- Want to get a formal quotation
+
+The user does NOT want a quote if they:
+- Are just asking general questions
+- Want information about services
+- Are browsing or learning
+- Ask "what services do you offer?"
+- Ask general questions without mentioning pricing
+- Ask "how much" without clear service specification
+- Mention multiple possible service types that need clarification
+
+Examples:
+- "I need a quote for cat ladder installation" → {"wants_quote": true}
+- "What services do you offer?" → {"wants_quote": false}
+- "Tell me about parquet flooring" → {"wants_quote": false}
+- "How much for 3 bedroom parquet" → {"wants_quote": false} (needs clarification)
+- "I need a quote for parquet sanding and varnishing" → {"wants_quote": true}
+- "Hello" → {"wants_quote": false}"""
+                    },
+                    {
+                        "role": "user",
+                        "content": message
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=50
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result.get('wants_quote', False)
+            
+        except Exception as e:
+            print(f"Error checking quote intent: {str(e)}")
+            # Fallback: check for explicit quote keywords only
+            quote_keywords = ['quote', 'quotation']
+            message_lower = message.lower()
+            return any(keyword in message_lower for keyword in quote_keywords)
     
     def _generate_tree_summary(self, tree: DecisionTree, collected_data: Dict[str, Any]) -> str:
         """Generate a human-readable summary from tree answers"""

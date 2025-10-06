@@ -14,18 +14,43 @@ class DocumentParser:
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
     
     def parse_pdf(self, file_path: str) -> str:
-        """Extract text from PDF"""
+        """Extract text from PDF with fallback for corrupted files"""
         text = ""
+        
+        # Try PyPDF2 first
         try:
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
                 for page_num, page in enumerate(pdf_reader.pages):
                     page_text = page.extract_text()
                     text += f"\n--- Page {page_num + 1} ---\n{page_text}"
+            return text
         except Exception as e:
-            raise Exception(f"Error parsing PDF: {str(e)}")
+            print(f"PyPDF2 failed: {str(e)}. Trying pdfplumber...")
         
-        return text
+        # Fallback to pdfplumber for corrupted PDFs
+        try:
+            import pdfplumber
+            with pdfplumber.open(file_path) as pdf:
+                for page_num, page in enumerate(pdf.pages):
+                    page_text = page.extract_text() or ""
+                    text += f"\n--- Page {page_num + 1} ---\n{page_text}"
+            return text
+        except Exception as e:
+            print(f"pdfplumber also failed: {str(e)}")
+        
+        # Last resort: try to read as raw text
+        try:
+            with open(file_path, 'rb') as f:
+                import codecs
+                content = f.read()
+                # Try to decode as latin-1 which accepts all byte values
+                text = content.decode('latin-1', errors='ignore')
+                # Filter to only printable characters
+                text = ''.join(char for char in text if char.isprintable() or char in '\n\r\t')
+                return f"⚠️ PDF may be corrupted. Extracted raw text:\n\n{text[:10000]}..."
+        except Exception as e:
+            raise Exception(f"Error parsing PDF: Could not read with any method. {str(e)}")
     
     def parse_csv(self, file_path: str) -> str:
         """Extract text from CSV"""

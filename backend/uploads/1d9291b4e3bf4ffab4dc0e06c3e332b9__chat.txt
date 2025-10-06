@@ -1,5 +1,7 @@
 # COMPREHENSIVE PRICING DETAILS EXTRACTION
 # All prices, quantities, units, and contexts from source documents
+#please correct if wrong
+
 
 ================================================================================
 SECTION 1: CONSTRUCTION, RENOVATION, AND INSTALLATION QUOTES (TOTAL LUMP SUMS)
