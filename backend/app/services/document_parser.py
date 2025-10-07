@@ -112,7 +112,11 @@ class DocumentParser:
         return chunks
     
     def extract_structured_data(self, chunk: str) -> Dict[str, Any]:
-        """Use GPT-5 to extract structured data from chunk"""
+        """Use GPT-5 to extract structured data from chunk
+        
+        For pricing tables with multiple items, this extracts the MOST RELEVANT item.
+        Priority: parquet/flooring services, then most specific match.
+        """
         try:
             response = self.client.chat.completions.create(
                 model=settings.OPENAI_MODEL,
@@ -120,10 +124,25 @@ class DocumentParser:
                     {
                         "role": "system",
                         "content": """You are an expert at extracting pricing and product information from text.
-Extract the following information from the given text:
+
+IMPORTANT: If the text contains a PRICING TABLE with MULTIPLE items, extract the MOST SPECIFIC pricing item.
+
+Priority order when multiple items are present:
+1. Parquet/flooring-related services (sanding, varnishing, installation)
+2. Specific per-unit pricing (per sqft, per sqm, per meter)
+3. The item with the most detailed description
+
+For example, from a table with:
+- Marble Polishing: $1.50 per sqft
+- Sanding and Varnishing: $1/psf
+- Vinyl Flooring: $4.80/sqft
+
+Choose "Sanding and Varnishing: $1/psf" if it's parquet-related.
+
+Extract the following information:
 1. Item name/product
 2. Base price (as a number)
-3. Price unit (e.g., per m², per unit, per sq ft)
+3. Price unit (e.g., per m², per unit, per sq ft, per psf, per sqft)
 4. Conditions (as a list of conditions)
 5. Location (if mentioned)
 

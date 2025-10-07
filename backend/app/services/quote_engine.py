@@ -158,36 +158,45 @@ class QuoteCalculationEngine:
                 highest_chunk = None
             else:
                 # Get most relevant price (not necessarily highest)
-                # For flooring, prefer per sqm pricing
+                # For flooring, prefer per sqft/sqm pricing
                 if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
-                    # Look for per sqm pricing first
-                    sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
-                    if sqm_chunks:
-                        selected = max(sqm_chunks, key=lambda x: x['price'])
+                    # Look for per sqft pricing (most common in documents)
+                    psf_chunks = [c for c in chunks_with_prices if 'psf' in c['chunk'].get('content', '').lower() or 'per square foot' in c['chunk'].get('content', '').lower() or '/sqf' in c['chunk'].get('content', '').lower()]
+                    
+                    if psf_chunks:
+                        # Found per-sqft pricing - use it
+                        selected = min(psf_chunks, key=lambda x: x['price'])  # Use lowest unit price
+                        base_price = selected['price']
+                        highest_chunk = selected['chunk']
+                        price_unit = 'per sqft'
+                        
+                        # Convert sqm to sqft if quantity is in sqm (1 sqm = 10.764 sqft)
+                        if quantity_unit in ['sqm', 'sq m', 'square meter']:
+                            quantity = quantity * 10.764
+                            print(f"Converted {quantity/10.764:.2f} sqm to {quantity:.2f} sqft for per-sqft pricing")
                     else:
-                        selected = max(chunks_with_prices, key=lambda x: x['price'])
+                        # Fallback: Look for per sqm pricing
+                        sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
+                        if sqm_chunks:
+                            selected = min(sqm_chunks, key=lambda x: x['price'])
+                            base_price = selected['price']
+                            highest_chunk = selected['chunk']
+                            price_unit = 'per sqm'
+                        else:
+                            # Last resort: use any relevant pricing
+                            selected = max(chunks_with_prices, key=lambda x: x['price'])
+                            highest_chunk = selected['chunk']
+                            chunk_price = selected['price']
+                            chunk_metadata = highest_chunk.get('metadata', {})
+                            price_unit = chunk_metadata.get('price_unit', self.config['default_unit'])
+                            base_price = chunk_price
                 else:
                     # For other services, use highest relevant price
                     selected = max(chunks_with_prices, key=lambda x: x['price'])
-                
-                highest_chunk = selected['chunk']
-                chunk_price = selected['price']
-                chunk_metadata = highest_chunk.get('metadata', {})
-                price_unit = chunk_metadata.get('price_unit', self.config['default_unit'])
-                
-                # Check if the chunk has an area/quantity that we need to scale from
-                chunk_content = highest_chunk.get('content', '').lower()
-                chunk_area_match = re.search(r'(\d+(?:\.\d+)?)\s*sqm', chunk_content)
-                
-                if chunk_area_match and quantity_unit in ['sqm', 'sq m', 'square meter']:
-                    # Found reference area in chunk - calculate per sqm rate
-                    chunk_area = float(chunk_area_match.group(1))
-                    per_sqm_rate = chunk_price / chunk_area
-                    base_price = per_sqm_rate
-                    price_unit = 'sqm'
-                    print(f"Calculated per sqm rate: ${per_sqm_rate:.2f} (${chunk_price} for {chunk_area} sqm)")
-                else:
-                    # Use chunk price as-is
+                    highest_chunk = selected['chunk']
+                    chunk_price = selected['price']
+                    chunk_metadata = highest_chunk.get('metadata', {})
+                    price_unit = chunk_metadata.get('price_unit', self.config['default_unit'])
                     base_price = chunk_price
         
         # Calculate adjustments
@@ -375,23 +384,55 @@ class QuoteCalculationEngine:
     ) -> DraftQuotePreview:
         """Generic calculation for any decision tree"""
         
-        # Build item name from first few answers
+        # Build item name from specific meaningful fields
         item_parts = [tree.display_name]
         search_parts = [tree.display_name]
         
-        for key, value in list(collected.items())[:3]:
-            if value and str(value).lower() not in ['true', 'false', 'yes', 'no']:
-                item_parts.append(str(value))
-                search_parts.append(str(value))
+        # Add area type if present
+        if collected.get('area_service_type'):
+            item_parts.append(f"({collected['area_service_type']})") 
+            search_parts.append(collected['area_service_type'])
+        
+        # Add area if present
+        if collected.get('total_area'):
+            item_parts.append(f"{collected['total_area']}sqm")
+            search_parts.append(f"{collected['total_area']} sqm")
+        
+        # Add finish type if present and meaningful
+        if collected.get('finish_type'):
+            search_parts.append(collected['finish_type'])
+        
+        # Add varnish type if present and meaningful  
+        if collected.get('varnish_type'):
+            search_parts.append(collected['varnish_type'])
         
         item_name = " ".join(item_parts)
         search_query = " ".join(search_parts)
         
         print(f"Generic Tree Quote - Item: {item_name}")
         print(f"Search query: {search_query}")
+        print(f"Collected data: {collected}")
         
-        # Search and calculate
-        relevant_chunks = self._find_relevant_chunks(db, search_query)
+        # Extract area/quantity from collected data
+        import re
+        total_area = collected.get('total_area') or collected.get('area') or collected.get('quantity_or_area')
+        quantity = 1  # Default quantity
+        quantity_unit = 'per unit'
+        
+        if total_area:
+            try:
+                # Parse numeric area
+                area_val = float(total_area)
+                quantity = area_val
+                quantity_unit = 'sqm'  # Assume square meters from decision tree
+                print(f"Parsed area from tree: {area_val} sqm")
+            except (ValueError, TypeError):
+                print(f"Could not parse area: {total_area}")
+        
+        # Search and calculate - use broader search to find per-unit pricing
+        # Add "per sqm", "per sqft", "per square" to search for unit pricing
+        unit_search_query = search_query + " per sqm per sqft per square foot rate"
+        relevant_chunks = self._find_relevant_chunks(db, unit_search_query)
         
         if not relevant_chunks:
             return self._empty_quote(f"No pricing found for {item_name}")
@@ -412,40 +453,93 @@ class QuoteCalculationEngine:
                             if price_val <= self.config['max_price_threshold']:
                                 chunks_with_prices.append({
                                     'chunk': chunk,
-                                    'price': price_val
+                                    'price': price_val,
+                                    'content': content,
+                                    'metadata': metadata
                                 })
+                                print(f"Found chunk with price: ${price_val}, unit: {metadata.get('price_unit')}, content: {content[:100]}")
                         except (ValueError, TypeError):
                             continue
         
         if not chunks_with_prices:
             return self._empty_quote(f"Pricing not available for {item_name}")
         
-        # Get most relevant price (not necessarily highest)
-        # For flooring, prefer per sqm pricing
+        # For flooring/parquet services, look for per-sqft or per-sqm pricing
+        selected_chunk = None
+        base_price_per_unit = None
+        final_unit = quantity_unit
+        
         if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
-            # Look for per sqm pricing first
-            sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
-            if sqm_chunks:
-                selected = max(sqm_chunks, key=lambda x: x['price'])
+            print(f"Detected flooring service, looking for per-sqft/sqm pricing")
+            
+            # First priority: look for per sqft pricing (most common in documents)
+            psf_chunks = [c for c in chunks_with_prices if 'psf' in c['content'] or 'per square foot' in c['content'] or '/sqf' in c['content']]
+            
+            if psf_chunks:
+                # Found per-sqft pricing
+                selected = min(psf_chunks, key=lambda x: x['price'])  # Use lowest unit price for per-sqft
+                base_price_per_unit = selected['price']
+                selected_chunk = selected['chunk']
+                final_unit = 'sqft'
+                print(f"Using per sqft pricing: ${base_price_per_unit}/sqft")
+                
+                # Convert sqm to sqft for calculation (1 sqm = 10.764 sqft)
+                if quantity_unit == 'sqm':
+                    area_in_sqft = quantity * 10.764
+                    print(f"Converting {quantity} sqm to {area_in_sqft:.2f} sqft")
+                    quantity = area_in_sqft
+                    quantity_unit = 'sqft'
             else:
-                selected = max(chunks_with_prices, key=lambda x: x['price'])
+                # Fallback: look for per sqm pricing
+                sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['content'] or 'per sqm' in c['content']]
+                if sqm_chunks:
+                    selected = min(sqm_chunks, key=lambda x: x['price'])
+                    base_price_per_unit = selected['price']
+                    selected_chunk = selected['chunk']
+                    final_unit = 'sqm'
+                    print(f"Using per sqm pricing: ${base_price_per_unit}/sqm")
+                else:
+                    # Last resort: use package pricing (not ideal for large areas)
+                    selected = max(chunks_with_prices, key=lambda x: x['price'])
+                    base_price_per_unit = selected['price']
+                    selected_chunk = selected['chunk']
+                    final_unit = selected['metadata'].get('price_unit', 'per unit')
+                    quantity = 1  # Package pricing is per job, not per sqm
+                    print(f"WARNING: Using package pricing ${base_price_per_unit} (no per-unit pricing found)")
         else:
             # For other services, use highest relevant price
             selected = max(chunks_with_prices, key=lambda x: x['price'])
+            base_price_per_unit = selected['price']
+            selected_chunk = selected['chunk']
+            final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
         
-        base_price = selected['price']
-        price_unit = selected['chunk'].get('metadata', {}).get('price_unit', self.config['generic_tree_default_unit'])
+        # Calculate total: base_price_per_unit × quantity
+        subtotal = base_price_per_unit * quantity
         
-        total_price = round(base_price * self.config['gst_multiplier'], 2)
+        # Calculate GST as adjustment
+        gst_amount = round(subtotal * self.config['gst_rate'], 2)
+        adjustments = [
+            QuoteAdjustment(
+                description=self.config['gst_description'],
+                amount=gst_amount,
+                type="fixed"
+            )
+        ]
+        
+        total_price = round(subtotal + gst_amount, 2)
+        
+        print(f"Final calculation: ${base_price_per_unit} × {quantity} {quantity_unit} = ${subtotal} (before GST)")
+        print(f"GST (9%): ${gst_amount}")
+        print(f"Total with GST: ${total_price}")
         
         return DraftQuotePreview(
             item_name=item_name,
-            base_price=base_price,
-            unit=price_unit,
-            quantity=self.config['default_quantity'],
-            adjustments=[],
+            base_price=base_price_per_unit,
+            unit=final_unit,
+            quantity=quantity,
+            adjustments=adjustments,
             total_price=total_price,
-            conditions=self._extract_conditions(selected['chunk'], collected),
+            conditions=self._extract_conditions(selected_chunk, collected),
             source_references=[],
             missing_info=[],
             can_submit=True

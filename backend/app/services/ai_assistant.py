@@ -57,15 +57,27 @@ When customer explicitly wants a quote, ask for:
 3. Location (affects delivery and pricing)
 4. Any special requirements
 
-CRITICAL - WHEN TO CALL draft_ready FUNCTION:
-- Once you have: service type, quantity/area, and location
-- When customer says "confirm", "proceed", "yes", or similar confirmation
-- When all necessary information is collected
-- DO NOT just provide a summary - CALL the draft_ready function
-- The draft_ready function will generate the actual quote
-- After calling draft_ready, the system will show the quote to the customer
+CRITICAL - WORKFLOW FOR GENERATING QUOTES:
+1. Collect required information: service type, quantity/area, and location
+2. Once ALL information is collected, summarize what you have
+3. Then ask: "Please type CONFIRM to proceed with generating your quotation"
+4. WAIT for customer to say "CONFIRM", "confirm", "yes", "proceed", or similar
+5. ONLY AFTER customer confirms, call the draft_ready function
 
-Remember: Just telling the customer about the quote is NOT enough - you MUST call the draft_ready function to generate it."""
+IMPORTANT - NEVER SKIP THE CONFIRMATION STEP:
+- Even if the customer provides all information in one message
+- Even if you have service type, quantity/area, and location
+- ALWAYS ask for confirmation before calling draft_ready
+- DO NOT immediately call the function after collecting information
+- DO NOT say "[Calling draft_ready function...]" or similar technical messages
+- Just ask: "Please type CONFIRM to proceed with generating your quotation"
+
+WHEN TO CALL draft_ready FUNCTION:
+- ONLY when customer explicitly says "confirm", "proceed", "yes" after you've asked for confirmation
+- NEVER call it immediately after collecting all information
+- Always wait for explicit customer confirmation
+
+Remember: Just telling the customer about the quote is NOT enough - you MUST call the draft_ready function to generate it AFTER they confirm."""
     
     def process_enquiry(
         self,
@@ -517,21 +529,60 @@ Remember: Just telling the customer about the quote is NOT enough - you MUST cal
         
         # If user provided a message AND tree has asked a question, process the answer
         if user_message and next_q and tree_has_asked_question:
-            # Parse the answer based on question type
+            # First try to parse the answer based on question type
             parsed_answer = tree_engine.parse_answer(
                 user_message, 
                 next_q.type, 
                 next_q.choices
             )
             
-            if parsed_answer is not None:
+            print(f"Parsed answer for {next_q.key}: {parsed_answer} (type: {type(parsed_answer)})")
+            
+            # Check if parsing succeeded (note: False is a valid answer for boolean!)
+            if parsed_answer is not None or (next_q.type == 'boolean' and isinstance(parsed_answer, bool)):
                 # Store the answer
                 collected_data[next_q.key] = parsed_answer
                 enquiry.collected_data = collected_data
+                
+                # Mark as modified for SQLAlchemy
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(enquiry, "collected_data")
+                
                 db.commit()
+                print(f"Stored answer: {next_q.key} = {parsed_answer}")
+                print(f"Updated collected_data: {enquiry.collected_data}")
                 
                 # Get next question
                 next_q = tree_engine.get_next_question(tree, collected_data)
+            else:
+                # Parsing failed - check if user wants to skip or proceed anyway
+                user_intent = self._check_user_intent(user_message)
+                
+                if user_intent == "skip" or user_intent == "proceed_anyway":
+                    # User wants to skip this question - mark as empty string for optional questions
+                    if not next_q.required:
+                        collected_data[next_q.key] = ""
+                        enquiry.collected_data = collected_data
+                        
+                        from sqlalchemy.orm.attributes import flag_modified
+                        flag_modified(enquiry, "collected_data")
+                        
+                        db.commit()
+                        next_q = tree_engine.get_next_question(tree, collected_data)
+                    else:
+                        # Required question - ask AI to respond naturally
+                        yield {
+                            'type': 'message',
+                            'content': f"I need this information to provide an accurate quote: {next_q.question}"
+                        }
+                        return
+                else:
+                    # Failed to parse and not trying to skip - ask for clarification
+                    yield {
+                        'type': 'message',
+                        'content': f"I didn't quite understand that. {next_q.question}"
+                    }
+                    return
         
         # If no more questions, prepare draft
         if not next_q:
@@ -852,9 +903,54 @@ Examples:
             
             result = json.loads(response.choices[0].message.content)
             return result.get('wants_quote', False)
-            
         except Exception as e:
             print(f"Error checking quote intent: {str(e)}")
+            return False
+    
+    def _check_user_intent(self, message: str) -> str:
+        """Check user's intent when answering decision tree questions"""
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Determine the user's intent from their message.
+
+Return JSON: {"intent": "answer"|"skip"|"proceed_anyway"}
+
+Intents:
+- "answer": User is providing an answer to the question
+- "skip": User wants to skip this question or doesn't know the answer
+- "proceed_anyway": User wants to proceed with the quote/process without answering
+
+Examples:
+- "53 square meters" → {"intent": "answer"}
+- "master bed 10sqm" → {"intent": "answer"}
+- "I don't know" → {"intent": "skip"}
+- "Skip this" → {"intent": "skip"}
+- "Ask about a quote" → {"intent": "proceed_anyway"}
+- "Just give me the quote" → {"intent": "proceed_anyway"}
+- "Can we skip this" → {"intent": "skip"}
+- "Not sure" → {"intent": "skip"}
+- "1 only" → {"intent": "answer"}
+- "Apartment" → {"intent": "answer"}"""
+                    },
+                    {
+                        "role": "user",
+                        "content": message
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=50
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result.get('intent', 'answer')
+        except Exception as e:
+            print(f"Error checking user intent: {str(e)}")
+            return 'answer'  # Default to treating as answer
             # Fallback: check for explicit quote keywords only
             quote_keywords = ['quote', 'quotation', 'confirm', 'proceed', 'finalize', 'complete']
             message_lower = message.lower()

@@ -142,7 +142,18 @@ Examples:
         current_id = start_id
         path.append(current_id)
         
-        # Follow the branch based on answers
+        # Check if this is a linear tree (all next fields are null)
+        is_linear = all(q.get('next') is None for q in questions)
+        
+        if is_linear:
+            # For linear trees, include all questions in sequence
+            for question in questions:
+                q_id = question.get('id')
+                if q_id and q_id != start_id:
+                    path.append(q_id)
+            return path
+        
+        # Follow the branch based on answers (for branching trees)
         while current_id:
             current_q = question_dict.get(current_id)
             if not current_q:
@@ -231,6 +242,9 @@ Be flexible with casual language, slang, and typos. For example:
 
 Return JSON: {{\"value\": "exact_choice"}} where exact_choice is one of the provided options.
 If completely unclear, return {{\"value\": null}}"""
+            elif question_type == 'text':
+                # For text questions, just clean and return the text
+                prompt = f"Clean up this text (fix obvious typos, trim whitespace): '{answer_text}'. Return JSON: {{\"value\": \"cleaned_text\"}}"
             else:
                 prompt = f"Extract the answer from: '{answer_text}'. Return JSON: {{\"value\": \"text\"}}"
             
@@ -242,7 +256,7 @@ If completely unclear, return {{\"value\": null}}"""
                 ],
                 temperature=0,
                 response_format={"type": "json_object"},
-                max_tokens=50
+                max_tokens=100
             )
             
             result = json.loads(response.choices[0].message.content)
