@@ -419,13 +419,15 @@ class QuoteCalculationEngine:
         ladder_height = collected.get('ladder_height')  # For cat ladder / height-based services
         quantity = 1  # Default quantity
         quantity_unit = 'per unit'
+        is_ladder_service = False
         
         # Check if this is a height-based service (cat ladder)
         if ladder_height:
+            is_ladder_service = True
             try:
                 height_val = float(ladder_height)
                 quantity = height_val
-                quantity_unit = 'm'  # meters
+                quantity_unit = 'meter'
                 print(f"Parsed ladder height from tree: {height_val}m")
             except (ValueError, TypeError):
                 print(f"Could not parse ladder height: {ladder_height}")
@@ -574,16 +576,31 @@ class QuoteCalculationEngine:
                 selected = scored_chunks[0][1]  # Get chunk from (score, chunk) tuple
                 base_price_per_unit = selected['price']
                 selected_chunk = selected['chunk']
-                # Get unit from chunk metadata - NO HARDCODING
+                # Get unit from chunk metadata
                 final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
-                print(f"Using pricing from documents (score {scored_chunks[0][0]}): ${base_price_per_unit} {final_unit}")
+                
+                # SPECIAL HANDLING FOR LADDER: Normalize "per 0.5meter run" to "per meter"
+                if is_ladder_service and final_unit and '0.5' in final_unit.lower():
+                    # Price is per 0.5m, so convert to per 1m
+                    base_price_per_unit = base_price_per_unit * 2
+                    final_unit = 'per meter'
+                    print(f"Normalized ladder pricing: ${base_price_per_unit} {final_unit} (was per 0.5m)")
+                else:
+                    print(f"Using pricing from documents (score {scored_chunks[0][0]}): ${base_price_per_unit} {final_unit}")
             else:
                 # Fallback if no scored chunks
                 selected = material_filtered_chunks[0]
                 base_price_per_unit = selected['price']
                 selected_chunk = selected['chunk']
                 final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
-                print(f"Using fallback pricing: ${base_price_per_unit} {final_unit}")
+                
+                # SPECIAL HANDLING FOR LADDER: Normalize "per 0.5meter run" to "per meter"
+                if is_ladder_service and final_unit and '0.5' in final_unit.lower():
+                    base_price_per_unit = base_price_per_unit * 2
+                    final_unit = 'per meter'
+                    print(f"Normalized ladder pricing: ${base_price_per_unit} {final_unit} (was per 0.5m)")
+                else:
+                    print(f"Using fallback pricing: ${base_price_per_unit} {final_unit}")
         
         # Calculate total: base_price_per_unit × quantity
         subtotal = base_price_per_unit * quantity

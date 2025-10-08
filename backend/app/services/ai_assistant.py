@@ -60,25 +60,30 @@ When customer explicitly wants a quote, ask for:
 
 CRITICAL - WORKFLOW FOR GENERATING QUOTES:
 1. Collect required information: service type, quantity/area, and location
-2. Once ALL information is collected, summarize what you have
-3. Then ask: "Please type CONFIRM to proceed with generating your quotation"
-4. WAIT for customer to say "CONFIRM", "confirm", "yes", "proceed", or similar
-5. ONLY AFTER customer confirms, call the draft_ready function
-
-IMPORTANT - NEVER SKIP THE CONFIRMATION STEP:
-- Even if the customer provides all information in one message
-- Even if you have service type, quantity/area, and location
-- ALWAYS ask for confirmation before calling draft_ready
-- DO NOT immediately call the function after collecting information
-- DO NOT say "[Calling draft_ready function...]" or similar technical messages
-- Just ask: "Please type CONFIRM to proceed with generating your quotation"
+2. Once ALL information is collected, you have two options:
+   
+   Option A - Customer explicitly requests the quote:
+   - If customer says "give me a quote", "generate quote", "show me the quote", "provide quote", "pls give quote", etc.
+   - IMMEDIATELY call the draft_ready function to generate the quote
+   - DO NOT ask for additional confirmation
+   
+   Option B - Customer provides info but doesn't explicitly request quote yet:
+   - Summarize what you have collected
+   - Ask: "Would you like me to generate a quotation with these details?"
+   - Wait for customer to confirm ("yes", "confirm", "proceed", "give quote", etc.)
+   - Then call draft_ready function
 
 WHEN TO CALL draft_ready FUNCTION:
-- ONLY when customer explicitly says "confirm", "proceed", "yes" after you've asked for confirmation
-- NEVER call it immediately after collecting all information
-- Always wait for explicit customer confirmation
+- When customer explicitly says "give me a quote", "generate quote", "provide quote", "show quote", etc.
+- When customer confirms after you've summarized the collected information
+- When customer says "confirm", "yes", "proceed" in response to your summary
 
-Remember: Just telling the customer about the quote is NOT enough - you MUST call the draft_ready function to generate it AFTER they confirm."""
+WHEN NOT TO CALL draft_ready:
+- When you're still collecting information
+- When customer is just asking questions about the service
+- When information is incomplete
+
+Remember: If customer explicitly asks for a quote and you have the information, CALL draft_ready immediately. Don't make them confirm twice."""
     
     def process_enquiry(
         self,
@@ -173,7 +178,7 @@ Remember: Just telling the customer about the quote is NOT enough - you MUST cal
                     },
                     {
                         "name": "draft_ready",
-                        "description": "CALL THIS FUNCTION when you have collected: service type, quantity/area, and location. This function generates the actual draft quote for the customer. You MUST call this when customer confirms or when all required information is available.",
+                        "description": "CALL THIS FUNCTION to generate the actual draft quote. Call it when: 1) Customer explicitly says 'give me a quote', 'generate quote', 'provide quote', etc. OR 2) Customer confirms after you've summarized the information. You MUST have service type, quantity/area collected before calling.",
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -341,7 +346,7 @@ Remember: Just telling the customer about the quote is NOT enough - you MUST cal
                     },
                     {
                         "name": "draft_ready",
-                        "description": "CALL THIS FUNCTION when you have collected: service type, quantity/area, and location. This function generates the actual draft quote for the customer. You MUST call this when customer confirms or when all required information is available.",
+                        "description": "CALL THIS FUNCTION to generate the actual draft quote. Call it when: 1) Customer explicitly says 'give me a quote', 'generate quote', 'provide quote', etc. OR 2) Customer confirms after you've summarized the information. You MUST have service type, quantity/area collected before calling.",
                         "parameters": {
                             "type": "object",
                             "properties": {
