@@ -14,6 +14,7 @@ function ChatInput({
   loading,
   onStop,
   rows = 1,
+  hasAttachment = false,
 }) {
   const contextValue = {
     value,
@@ -23,6 +24,7 @@ function ChatInput({
     onStop,
     variant,
     rows,
+    hasAttachment,
   };
 
   const handleKeyDown = (e) => {
@@ -64,7 +66,8 @@ function ChatInputTextArea({
   const handleKeyDown = (e) => {
     if (!onSubmit) return;
     if (e.key === "Enter" && !e.shiftKey) {
-      if (typeof value !== "string" || value.trim().length === 0) return;
+      const hasText = typeof value === "string" && value.trim().length > 0;
+      if (!hasText && !context.hasAttachment) return;
       e.preventDefault();
       onSubmit();
     }
@@ -134,7 +137,7 @@ function ChatInputSubmit({
   }
 
   const isDisabled =
-    typeof context.value !== "string" || context.value.trim().length === 0;
+    !context.hasAttachment && (typeof context.value !== "string" || context.value.trim().length === 0);
 
   return (
     <button

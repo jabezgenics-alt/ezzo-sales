@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
 import json
+import os
+import uuid
+from pathlib import Path
 from app.database import get_db
 from app.models import User, Enquiry, EnquiryMessage, EnquiryStatus, Quote
 from app.schemas import (
@@ -13,6 +16,7 @@ from app.schemas import (
 from app.auth import get_current_user
 from app.services.ai_assistant import ai_assistant
 from app.services.quote_engine import quote_engine
+from app.config import settings
 
 router = APIRouter(prefix="/api/enquiries", tags=["Enquiries"])
 
@@ -259,6 +263,140 @@ def send_message_stream(
             "Content-Type": "text/event-stream",
         }
     )
+
+
+@router.post("/{enquiry_id}/upload-image")
+async def upload_image_to_enquiry(
+    enquiry_id: int,
+    file: UploadFile = File(...),
+    caption: str = "Image upload",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload an image to an enquiry and get AI vision analysis"""
+    
+    enquiry = db.query(Enquiry).filter(
+        Enquiry.id == enquiry_id,
+        Enquiry.customer_id == current_user.id
+    ).first()
+    
+    if not enquiry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Enquiry not found"
+        )
+    
+    # Validate file type
+    allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+    file_ext = file.filename.split('.')[-1].lower()
+    
+    if file_ext not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type .{file_ext} not allowed. Allowed: {', '.join(allowed_types)}"
+        )
+    
+    # Create upload directory if not exists
+    upload_dir = Path(settings.UPLOAD_DIR) / "enquiry_images"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    file_path = upload_dir / unique_filename
+    
+    # Save file
+    try:
+        contents = await file.read()
+        
+        # Check file size (max 5MB for images)
+        if len(contents) > 5242880:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image too large. Max size: 5MB"
+            )
+        
+        with open(file_path, 'wb') as f:
+            f.write(contents)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error saving image: {str(e)}"
+        )
+    
+    # Build a public URL for the uploaded image that the frontend can access via the /api proxy
+    public_url = f"/api/uploads/enquiry_images/{unique_filename}"
+    
+    # Analyze image with GPT-4 Vision using the filesystem path
+    service_context = ""
+    if enquiry.service_tree_id:
+        from app.models import DecisionTree
+        tree = db.query(DecisionTree).filter(DecisionTree.id == enquiry.service_tree_id).first()
+        if tree:
+            service_context = tree.display_name
+    
+    # Include caption in context to guide the vision model
+    full_context = service_context
+    if caption:
+        full_context = f"{service_context} | caption: {caption}"
+
+    analysis = ai_assistant.analyze_image(str(file_path), full_context)
+    
+    # Save customer message with image
+    customer_message = EnquiryMessage(
+        enquiry_id=enquiry.id,
+        role="customer",
+        content=caption,
+        image_url=public_url
+    )
+    db.add(customer_message)
+    
+    # Save AI analysis as assistant message
+    assistant_message = EnquiryMessage(
+        enquiry_id=enquiry.id,
+        role="assistant",
+        content=analysis
+    )
+    db.add(assistant_message)
+    db.commit()
+    
+    # After image analysis, check if we should match a decision tree
+    # Combine initial message + analysis to detect service
+    if not enquiry.service_tree_id:
+        from app.services.tree_engine import tree_engine
+        combined_text = f"{enquiry.initial_message} {analysis}"
+        
+        # Check if this looks like a quote request with identifiable service
+        if ai_assistant._user_wants_quote(combined_text):
+            tree = tree_engine.match_service(db, combined_text)
+            if tree:
+                enquiry.service_tree_id = tree.id
+                db.commit()
+                print(f"Matched service tree from image: {tree.service_name} (ID: {tree.id})")
+                
+                # Get the first question from the tree
+                next_question = tree_engine.get_next_question(tree, enquiry.collected_data or {})
+                if next_question:
+                    question_text = next_question.question
+                    if next_question.choices:
+                        question_text += f"\n\nOptions: {', '.join(next_question.choices)}"
+                    
+                    # Save the first tree question as assistant message
+                    tree_question_msg = EnquiryMessage(
+                        enquiry_id=enquiry.id,
+                        role="assistant",
+                        content=question_text
+                    )
+                    db.add(tree_question_msg)
+                    db.commit()
+                    
+                    # Update analysis to include the question
+                    analysis = f"{analysis}\n\n{question_text}"
+    
+    return {
+        "message": "Image uploaded and analyzed successfully",
+        "image_url": public_url,
+        "analysis": analysis
+    }
 
 
 @router.post("/{enquiry_id}/answer", response_model=AIResponse)

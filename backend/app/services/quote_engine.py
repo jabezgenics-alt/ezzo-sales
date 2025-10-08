@@ -413,13 +413,23 @@ class QuoteCalculationEngine:
         print(f"Search query: {search_query}")
         print(f"Collected data: {collected}")
         
-        # Extract area/quantity from collected data
+        # Extract area/quantity/height from collected data
         import re
         total_area = collected.get('total_area') or collected.get('area') or collected.get('quantity_or_area')
+        ladder_height = collected.get('ladder_height')  # For cat ladder / height-based services
         quantity = 1  # Default quantity
         quantity_unit = 'per unit'
         
-        if total_area:
+        # Check if this is a height-based service (cat ladder)
+        if ladder_height:
+            try:
+                height_val = float(ladder_height)
+                quantity = height_val
+                quantity_unit = 'm'  # meters
+                print(f"Parsed ladder height from tree: {height_val}m")
+            except (ValueError, TypeError):
+                print(f"Could not parse ladder height: {ladder_height}")
+        elif total_area:
             try:
                 # Parse numeric area
                 area_val = float(total_area)
@@ -430,8 +440,8 @@ class QuoteCalculationEngine:
                 print(f"Could not parse area: {total_area}")
         
         # Search and calculate - use broader search to find per-unit pricing
-        # Add "per sqm", "per sqft", "per square" to search for unit pricing
-        unit_search_query = search_query + " per sqm per sqft per square foot rate"
+        # Let the documents/AI decide the unit type - no hardcoding
+        unit_search_query = search_query + " price rate cost per"
         relevant_chunks = self._find_relevant_chunks(db, unit_search_query)
         
         if not relevant_chunks:
@@ -464,11 +474,26 @@ class QuoteCalculationEngine:
         if not chunks_with_prices:
             return self._empty_quote(f"Pricing not available for {item_name}")
         
-        # For flooring/parquet services, look for per-sqft or per-sqm pricing
+        # Select best pricing based on service type - fully dynamic, no hardcoding
         selected_chunk = None
         base_price_per_unit = None
         final_unit = quantity_unit
         
+        # Filter by material if specified (for any service, not just ladders)
+        material = collected.get('material', '')
+        material_filtered_chunks = chunks_with_prices
+        
+        if material:
+            material_lower = material.lower()
+            # Try to filter by material mentioned in content
+            material_matches = [c for c in chunks_with_prices 
+                               if any(mat_word in c['content'].lower() 
+                                     for mat_word in material_lower.split())]
+            if material_matches:
+                material_filtered_chunks = material_matches
+                print(f"Filtered by material '{material}': {len(material_matches)} chunks")
+        
+        # Smart selection based on service type
         if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
             print(f"Detected flooring service, looking for per-sqft/sqm pricing")
             
@@ -507,11 +532,58 @@ class QuoteCalculationEngine:
                     quantity = 1  # Package pricing is per job, not per sqm
                     print(f"WARNING: Using package pricing ${base_price_per_unit} (no per-unit pricing found)")
         else:
-            # For other services, use highest relevant price
-            selected = max(chunks_with_prices, key=lambda x: x['price'])
-            base_price_per_unit = selected['price']
-            selected_chunk = selected['chunk']
-            final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
+            # For other services (ladders, etc), score by relevance to item_name
+            # Don't just pick lowest/highest price - pick most RELEVANT chunk
+            def score_relevance(chunk_data):
+                """Score how relevant a chunk is to the requested service"""
+                content_lower = chunk_data['content'].lower()
+                item_lower = item_name.lower()
+                score = 0
+                
+                # Check for key item_name words in content
+                item_words = [w for w in item_lower.split() if len(w) > 2]
+                for word in item_words:
+                    if word in content_lower:
+                        score += 10
+                
+                # Bonus for exact service match
+                if tree.display_name.lower() in content_lower:
+                    score += 20
+                
+                # Bonus for material match
+                material = collected.get('material', '')
+                if material:
+                    material_words = material.lower().split()
+                    for word in material_words:
+                        if len(word) > 2 and word in content_lower:
+                            score += 15
+                
+                return score
+            
+            # Score all material-filtered chunks
+            scored_chunks = [(score_relevance(c), c) for c in material_filtered_chunks]
+            scored_chunks.sort(reverse=True, key=lambda x: x[0])
+            
+            # Log top 3 scored chunks
+            print(f"Top scored chunks:")
+            for i, (score, chunk_data) in enumerate(scored_chunks[:3]):
+                print(f"  {i+1}. Score {score}: ${chunk_data['price']} {chunk_data['metadata'].get('price_unit')} - {chunk_data['content'][:80]}")
+            
+            # Select highest scored chunk (most relevant)
+            if scored_chunks:
+                selected = scored_chunks[0][1]  # Get chunk from (score, chunk) tuple
+                base_price_per_unit = selected['price']
+                selected_chunk = selected['chunk']
+                # Get unit from chunk metadata - NO HARDCODING
+                final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
+                print(f"Using pricing from documents (score {scored_chunks[0][0]}): ${base_price_per_unit} {final_unit}")
+            else:
+                # Fallback if no scored chunks
+                selected = material_filtered_chunks[0]
+                base_price_per_unit = selected['price']
+                selected_chunk = selected['chunk']
+                final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
+                print(f"Using fallback pricing: ${base_price_per_unit} {final_unit}")
         
         # Calculate total: base_price_per_unit × quantity
         subtotal = base_price_per_unit * quantity

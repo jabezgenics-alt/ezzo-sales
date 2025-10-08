@@ -14,6 +14,7 @@ class AIAssistant:
     
     def __init__(self):
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.vision_model = "gpt-4o"  # GPT-4 with vision for image analysis
         self.system_prompt = """You are a professional sales assistant for Ezzo Sales, a quotation system.
 
 Your role:
@@ -755,17 +756,29 @@ Remember: Just telling the customer about the quote is NOT enough - you MUST cal
             
             for msg in enquiry_messages:
                 role = "assistant" if msg.role == "assistant" else "user"
+                content = msg.content
+                
+                # If user message has an image, prepend context so AI remembers
+                if msg.role == "customer" and msg.image_url:
+                    content = f"[User uploaded an image with caption: {msg.content}]"
+                
                 messages.append({
                     "role": role,
-                    "content": msg.content
+                    "content": content
                 })
         else:
             # Fallback to direct access (may cause session issues)
             for msg in enquiry.messages:
                 role = "assistant" if msg.role == "assistant" else "user"
+                content = msg.content
+                
+                # If user message has an image, prepend context so AI remembers
+                if msg.role == "customer" and msg.image_url:
+                    content = f"[User uploaded an image with caption: {msg.content}]"
+                
                 messages.append({
                     "role": role,
-                    "content": msg.content
+                    "content": content
                 })
         
         return messages
@@ -979,6 +992,78 @@ Examples:
         except Exception as e:
             print(f"Error generating tree summary: {str(e)}")
             return f"All information collected for {tree.display_name}."
+    
+    def analyze_image(self, image_path: str, context: str = "") -> str:
+        """Analyze an image using GPT-4o Vision with a sales-lead focus.
+        - Ignore OS/toolbars/browser chrome and any UI that is not relevant to quoting.
+        - If the image appears unrelated to a product/site (e.g., a desktop screenshot), state that succinctly
+          and ask for a photo relevant to the requested service.
+        - Otherwise, return a concise, sales-focused assessment with actionable next steps.
+        """
+        import base64
+        from pathlib import Path
+        
+        try:
+            # Read and encode image
+            with open(image_path, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode('utf-8')
+            
+            # Determine image type
+            image_ext = Path(image_path).suffix.lower()
+            mime_type = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp'
+            }.get(image_ext, 'image/jpeg')
+            
+            # Build a strict, sales-oriented system instruction
+            system_msg = (
+                "You are a sales estimator for Ezzo Sales. "
+                "Given an image and short context, respond only with information useful for a sales lead/quotation. "
+                "Strictly ignore and do NOT describe OS UI, browser toolbars, docks, status bars, or unrelated UI elements. "
+                "If the image is not relevant to a product/site for quotation (e.g., a computer screenshot), reply briefly: "
+                "'This image doesn't appear relevant for a quotation. Please upload a photo of the site/product relevant to <service>.' "
+                "Otherwise provide: 1) Lead summary (1 line), 2) Observations that affect pricing (3-5 bullets), 3) Next questions (max 3). "
+                "Keep it under 120 words. Professional, specific, sales-focused."
+            )
+            
+            # Compose a user prompt using the provided context (may include caption/service)
+            prompt = (
+                f"Context: {context}\n"
+                "Analyze the attached image strictly for sales/quotation relevance only."
+            )
+            
+            # Call GPT-4 Vision
+            response = self.client.chat.completions.create(
+                model=self.vision_model,
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_data}"}},
+                        ],
+                    },
+                ],
+                max_tokens=350,
+                temperature=0.4,
+            )
+            
+            analysis = response.choices[0].message.content
+            print(f"Image analysis complete: {len(analysis)} chars")
+            return analysis
+            
+        except Exception as e:
+            print(f"Error analyzing image: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return (
+                "Thanks for the image. I couldn't analyze it right now; please try again or upload a photo "
+                "that clearly shows the product/site for quotation."
+            )
 
 
 # Singleton instance

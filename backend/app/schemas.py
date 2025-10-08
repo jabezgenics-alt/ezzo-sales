@@ -94,12 +94,14 @@ class EnquiryCreate(BaseModel):
 
 class EnquiryMessageCreate(BaseModel):
     content: str
+    image_url: Optional[str] = None
 
 
 class EnquiryMessageResponse(BaseModel):
     id: int
     role: str
     content: str
+    image_url: Optional[str] = None
     created_at: datetime
     
     class Config:

@@ -36,12 +36,15 @@ class DecisionTreeEngine:
 
 {json.dumps(service_options, indent=2)}
 
-Return JSON with: {{"service": "service_name"}} or {{"service": null}} if no match.
+Return JSON with: {{"service": "service_name"}} using the EXACT service_name key from the list above.
 
-Examples:
-- "I need a cat ladder" → {{"service": "cat_ladder"}}
-- "parquet flooring quote" → {{"service": "parquet_flooring"}}
-- "hello" → {{"service": null}}"""
+Matching Rules:
+- "cat ladder", "cat-ladder", "catladder", "ladder installation" → {{"service": "cat_ladder_installation"}}
+- "parquet", "parquet floor", "parquet sanding", "parquet varnishing" → {{"service": "parquet_sanding_varnishing"}}
+- "court", "basketball court", "tennis court", "pickleball court", "court marking" → {{"service": "court_markings"}}
+- "hello", "hi", general questions → {{"service": null}}
+
+Be flexible with spelling, punctuation, and partial matches. Match based on INTENT, not exact words."""
                     },
                     {
                         "role": "user",

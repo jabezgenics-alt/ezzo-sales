@@ -125,6 +125,7 @@ class EnquiryMessage(Base):
     enquiry_id = Column(Integer, ForeignKey("enquiries.id"))
     role = Column(String(50))  # 'customer' or 'assistant'
     content = Column(Text)
+    image_url = Column(String(500), nullable=True)  # Store uploaded image path/URL
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationship

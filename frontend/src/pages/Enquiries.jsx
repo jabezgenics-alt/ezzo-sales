@@ -19,11 +19,23 @@ export default function Enquiries() {
   const [streamingMessage, setStreamingMessage] = useState(null);
   const messagesEndRef = useRef(null);
   const { token } = useAuth();
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, streamingMessage]);
+
+  // Cleanup image preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (selectedImage?.preview) {
+        URL.revokeObjectURL(selectedImage.preview);
+      }
+    };
+  }, [selectedImage]);
 
   // Real streaming from backend
   const handleStreamingResponse = async (enquiryId, userMessage) => {
@@ -223,6 +235,95 @@ export default function Enquiries() {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleImageUpload = async (file, captionOverride = null, enquiryIdOverride = null) => {
+    const id = enquiryIdOverride ?? enquiryId;
+    if (!id) {
+      setError('Please start a conversation first before uploading images');
+      return;
+    }
+
+    const caption = (captionOverride ?? value.trim()) || 'Image for review';
+
+      // Show the user's image message immediately with a local preview
+      const tempId = `temp-${Date.now()}`;
+      const localPreviewUrl = selectedImage?.preview || URL.createObjectURL(file);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: tempId,
+          role: 'user',
+          content: caption,
+          image_url: localPreviewUrl,
+        },
+      ]);
+
+      // Clear the inline preview immediately from the input box
+      const previewToRevoke = selectedImage?.preview || null;
+      setSelectedImage(null);
+
+      setUploadingImage(true);
+      try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('caption', caption);
+
+      const response = await api.post(`/enquiries/${id}/upload-image?caption=${encodeURIComponent(caption)}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Swap the local preview with the public URL returned from the server
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, image_url: response.data.image_url } : m));
+
+      // Add AI analysis response
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.data.analysis
+      }]);
+
+      // Clear input and revoke the local preview URL
+      if (previewToRevoke && localPreviewUrl === previewToRevoke) {
+        URL.revokeObjectURL(previewToRevoke);
+      }
+      setValue('');
+      
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      setError(err.response?.data?.detail || 'Failed to upload image');
+      // Also surface an error in the chat so the user sees feedback
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, there was an error uploading or analyzing your image. Please try again.'
+      }]);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setError('Please select a valid image file (JPG, PNG, GIF, or WebP)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5242880) {
+        setError('Image too large. Maximum size is 5MB');
+        return;
+      }
+
+      setSelectedImage({
+        file,
+        preview: URL.createObjectURL(file)
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!value.trim()) return;
     
@@ -318,13 +419,28 @@ export default function Enquiries() {
                     />
                   )}
                   <div className="flex flex-col gap-2 max-w-[85%] md:max-w-[80%]">
-                    <div className={`rounded-2xl px-3 py-2 md:px-4 md:py-2 text-sm md:text-base whitespace-pre-wrap ${
-                      message.role === 'user'
-                        ? 'bg-black text-white'
-                        : 'bg-neutral-100 text-black'
-                    }`}>
-                      {formatMessage(message.content)}
-                    </div>
+                    {/* Image Display */}
+                    {message.image_url && (
+                      <div className={`rounded-xl overflow-hidden border border-gray-200 shadow-sm max-w-xs ${
+                        message.role === 'user' ? 'ml-auto' : ''
+                      }`}>
+                        <img 
+                          src={message.image_url} 
+                          alt="Uploaded" 
+                          className="w-full h-auto max-h-80 object-contain bg-white"
+                        />
+                      </div>
+                    )}
+                    
+                    {message.content && message.content !== 'Image for review' && (
+                      <div className={`rounded-2xl px-3 py-2 md:px-4 md:py-2 text-sm md:text-base whitespace-pre-wrap ${
+                        message.role === 'user'
+                          ? 'bg-black text-white'
+                          : 'bg-neutral-100 text-black'
+                      }`}>
+                        {formatMessage(message.content)}
+                      </div>
+                    )}
                     
                     {/* Draft Quote Display */}
                     {message.draft_quote && (
@@ -467,7 +583,7 @@ export default function Enquiries() {
               )}
 
               {/* Loading indicator */}
-              {isLoading && !streamingMessage && (
+              {(isLoading || uploadingImage) && !streamingMessage && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -520,17 +636,114 @@ export default function Enquiries() {
       {/* Input Box - Fixed at bottom */}
       <div className="w-full bg-white flex-shrink-0">
         <div className="w-full max-w-2xl mx-auto px-4 py-3 md:p-4">
-          <ChatInput
-            variant="default"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onSubmit={handleSubmit}
-            loading={isLoading}
-            onStop={() => setIsLoading(false)}
-          >
-            <ChatInputTextArea placeholder="Ask about a quote" className="text-base md:text-lg w-full min-h-[48px]" />
-            <ChatInputSubmit />
-          </ChatInput>
+          {/* Image Upload Input (Hidden) */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageSelect}
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            className="hidden"
+          />
+          
+          {/* Chat Input with integrated plus button and file preview */}
+          <div className="relative">
+            {/* Selected Image Preview - Inside the input container */}
+            {selectedImage && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="mb-2 relative inline-block"
+              >
+                <div className="relative group">
+                  <img 
+                    src={selectedImage.preview} 
+                    alt="Preview" 
+                    className="w-24 h-24 rounded-lg object-cover border border-gray-300 shadow-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      URL.revokeObjectURL(selectedImage.preview);
+                      setSelectedImage(null);
+                    }}
+                    className="absolute -top-2 -right-2 p-1 bg-black text-white rounded-full hover:bg-gray-800 transition-colors shadow-lg"
+                    title="Remove image"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+            
+            <ChatInput
+              variant="default"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onSubmit={async () => {
+                if (selectedImage) {
+                  const caption = (value || '').trim() || 'Image for review';
+                  // If no enquiry exists yet, create it first using the typed message
+                  if (!enquiryId) {
+                    const userMessage = (value || '').trim();
+                    if (!userMessage) {
+                      setError('Please enter a message before sending an image');
+                      return;
+                    }
+
+                    setIsLoading(true);
+                    setError(null);
+                    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+                    setValue(''); // clear input immediately
+                    setHasMessages(true);
+                    try {
+                      const createResponse = await api.post(`/enquiries/`, { initial_message: userMessage });
+                      const newId = createResponse.data.id;
+                      if (!newId) throw new Error('Failed to create enquiry - no ID returned');
+                      setEnquiryId(newId);
+
+                      // Stream AI response to the initial text
+                      await handleStreamingResponse(newId, userMessage);
+                      // Then upload the image with the same caption
+                      await handleImageUpload(selectedImage.file, caption, newId);
+                      // Clear the text input after successful submission
+                      setValue('');
+                    } catch (err) {
+                      console.error('Error creating enquiry or sending message:', err);
+                      setError(err.response?.data?.detail || 'Failed to send message');
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  } else {
+                    setValue(''); // clear input immediately
+                    await handleImageUpload(selectedImage.file, caption);
+                  }
+                } else {
+                  await handleSubmit();
+                }
+              }}
+              loading={isLoading || uploadingImage}
+              onStop={() => setIsLoading(false)}
+              hasAttachment={!!selectedImage}
+            >
+              {/* Plus Icon for Image Upload - Inside input */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || uploadingImage || !enquiryId}
+                type="button"
+                className="flex-shrink-0 p-1.5 -ml-3 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Upload image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+              
+              <ChatInputTextArea placeholder="Ask about a quote" className="text-base md:text-lg w-full min-h-[48px]" />
+              <ChatInputSubmit />
+            </ChatInput>
+          </div>
         </div>
       </div>
     </div>

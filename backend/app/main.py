@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import warnings
@@ -60,6 +61,9 @@ app.include_router(enquiries.router)
 app.include_router(admin.router)
 app.include_router(knowledge.router)
 app.include_router(decision_trees.router)
+
+# Serve uploaded files under /api/uploads so the frontend can access them via the proxy
+app.mount("/api/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 
 @app.get("/")
