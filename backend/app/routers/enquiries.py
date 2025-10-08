@@ -4,11 +4,11 @@ from sqlalchemy.orm import Session
 from typing import List
 import json
 from app.database import get_db
-from app.models import User, Enquiry, EnquiryMessage, EnquiryStatus
+from app.models import User, Enquiry, EnquiryMessage, EnquiryStatus, Quote
 from app.schemas import (
-    EnquiryCreate, EnquiryResponse, EnquiryMessageCreate, 
+    EnquiryCreate, EnquiryResponse, EnquiryMessageCreate,
     EnquiryMessageResponse, EnquiryAnswerRequest, AIResponse,
-    DraftQuotePreview, ConversationTitleRequest
+    DraftQuotePreview, ConversationTitleRequest, QuoteResponse
 )
 from app.auth import get_current_user
 from app.services.ai_assistant import ai_assistant
@@ -421,6 +421,59 @@ def submit_to_admin(
     }
 
 
+@router.get("/quotes", response_model=List[QuoteResponse])
+def get_my_quotes(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all quotes for the current user"""
+
+    # Get all enquiries for this user
+    enquiry_ids = db.query(Enquiry.id).filter(
+        Enquiry.customer_id == current_user.id
+    ).all()
+    enquiry_ids = [e[0] for e in enquiry_ids]
+
+    # Get all quotes for these enquiries
+    quotes = db.query(Quote).filter(
+        Quote.enquiry_id.in_(enquiry_ids)
+    ).order_by(Quote.created_at.desc()).all()
+
+    return quotes
+
+
+@router.get("/quotes/{quote_id}", response_model=QuoteResponse)
+def get_my_quote(
+    quote_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific quote for the current user"""
+
+    # Get the quote
+    quote = db.query(Quote).filter(Quote.id == quote_id).first()
+
+    if not quote:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quote not found"
+        )
+
+    # Verify the quote belongs to this user's enquiry
+    enquiry = db.query(Enquiry).filter(
+        Enquiry.id == quote.enquiry_id,
+        Enquiry.customer_id == current_user.id
+    ).first()
+
+    if not enquiry:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this quote"
+        )
+
+    return quote
+
+
 @router.post("/generate-title")
 def generate_conversation_title(
     request: ConversationTitleRequest,
@@ -429,10 +482,10 @@ def generate_conversation_title(
     """Generate a creative conversation title based on the first message"""
     from openai import OpenAI
     from app.config import settings
-    
+
     try:
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        
+
         response = client.chat.completions.create(
             model=settings.OPENAI_MODEL,
             messages=[
@@ -462,18 +515,18 @@ Return ONLY the title, no quotes or extra text."""
             temperature=0.7,
             max_tokens=20
         )
-        
+
         title = response.choices[0].message.content.strip()
-        
+
         # Remove quotes if present
         title = title.replace('"', '').replace("'", '')
-        
+
         # Ensure it's not too long
         if len(title) > 40:
             title = title[:37] + '...'
-        
+
         return {"title": title}
-        
+
     except Exception as e:
         print(f"Error generating title: {str(e)}")
         # Fallback to simple title

@@ -480,7 +480,7 @@ class QuoteCalculationEngine:
                 selected = min(psf_chunks, key=lambda x: x['price'])  # Use lowest unit price for per-sqft
                 base_price_per_unit = selected['price']
                 selected_chunk = selected['chunk']
-                final_unit = 'sqft'
+                final_unit = 'per sqft'
                 print(f"Using per sqft pricing: ${base_price_per_unit}/sqft")
                 
                 # Convert sqm to sqft for calculation (1 sqm = 10.764 sqft)
@@ -496,7 +496,7 @@ class QuoteCalculationEngine:
                     selected = min(sqm_chunks, key=lambda x: x['price'])
                     base_price_per_unit = selected['price']
                     selected_chunk = selected['chunk']
-                    final_unit = 'sqm'
+                    final_unit = 'per sqm'
                     print(f"Using per sqm pricing: ${base_price_per_unit}/sqm")
                 else:
                     # Last resort: use package pricing (not ideal for large areas)
