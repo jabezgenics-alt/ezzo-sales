@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from app.models import Enquiry, KnowledgeChunk, Quote
 from app.services.vector_store import vector_store
+from app.services.ai_pricing_service import ai_pricing_service
 from app.schemas import QuoteAdjustment, DraftQuotePreview
 
 
@@ -9,355 +10,134 @@ class QuoteCalculationEngine:
     """Calculate quotes based on KB data and customer requirements"""
     
     def __init__(self):
-        # Configuration values - can be overridden by knowledge base
+        # Minimal configuration - AI will handle most decisions
         self.config = {
             'default_item_name': 'Unknown Item',
             'default_quantity': 1,
             'default_unit': 'unit',
             'default_base_price': 0,
             'max_price_threshold': 10000,
-            'flooring_keywords': ['flooring', 'floor', 'parquet', 'hardwood', 'vinyl', 'tile', 'marble', 'terrazzo'],
             'search_limit': 10,
-            'feet_to_meters': 0.3048,
-            'rungs_per_meter': 2,
-            'gst_rate': 0.09,
-            'gst_multiplier': 1.09,
-            'gst_description': 'GST (9%)',
-            'gst_notice': 'Price includes 9% GST',
             'pricing_not_available': 'Pricing Not Available',
-            'court_markings_default_unit': 'per court',
-            'generic_tree_default_unit': 'per unit'
+            'gst_notice': 'Price includes GST'
         }
-        # Load configuration from knowledge base
-        self._load_config_from_kb()
     
-    def _load_config_from_kb(self):
-        """Load configuration values from knowledge base"""
-        try:
-            # Search for configuration information
-            config_results = vector_store.search("GST rate configuration pricing settings", limit=5)
-            
-            for result in config_results:
-                content = result.get('content', '').lower()
-                metadata = result.get('metadata', {})
-                
-                # Extract GST rate if found
-                if 'gst' in content and '9%' in content:
-                    # GST rate is already correct in config
-                    pass
-                
-                # Extract other configuration values if present
-                if 'max price' in content or 'price threshold' in content:
-                    # Could extract price thresholds from KB if available
-                    pass
-                    
-        except Exception as e:
-            print(f"Error loading config from KB: {str(e)}")
-            # Continue with default config
-    
-    def calculate_draft_quote(
-        self,
-        db: Session,
-        enquiry: Enquiry
-    ) -> DraftQuotePreview:
-        """Calculate draft quote from enquiry"""
-        
-        # Get collected data
-        collected = enquiry.collected_data or {}
-        
-        # Check if this is from a decision tree
-        if enquiry.service_tree_id:
-            return self._calculate_from_tree(db, enquiry, collected)
-        
-        # Legacy path: extract key information
-        item_name = collected.get('item', self.config['default_item_name'])
-        
-        # Parse quantity_or_area field
-        quantity_or_area = collected.get('quantity_or_area') or collected.get('quantity') or collected.get('area') or self.config['default_quantity']
-        
-        # Extract numeric value and unit from quantity_or_area
-        import re
-        quantity_str = str(quantity_or_area)
-        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(sqm|sq m|square meter|unit|bedroom)', quantity_str.lower())
-        
-        if area_match:
-            quantity = float(area_match.group(1))
-            quantity_unit = area_match.group(2)
-            print(f"Parsed quantity: {quantity} {quantity_unit}")
-        else:
-            try:
-                quantity = float(quantity_or_area)
-                quantity_unit = None
-            except (ValueError, TypeError):
-                quantity = self.config['default_quantity']
-                quantity_unit = None
-        
-        # Build search query with more context
-        search_query = item_name
-        if collected.get('material'):
-            search_query += f" {collected['material']}"
-        if collected.get('height'):
-            search_query += f" {collected['height']}"
-        if collected.get('special_features'):
-            features = collected['special_features']
-            if isinstance(features, list):
-                search_query += " " + " ".join(features)
-        
-        print(f"Quote search query: {search_query}")
-        
-        # Search for relevant chunks with highest prices
-        relevant_chunks = self._find_relevant_chunks(db, search_query)
-        
-        if not relevant_chunks:
-            return DraftQuotePreview(
-                item_name=item_name,
-                base_price=self.config['default_base_price'],
-                unit=self.config['default_unit'],
-                quantity=quantity,
-                adjustments=[],
-                total_price=self.config['default_base_price'],
-                conditions=["No pricing information available"],
-                source_references=[],
-                missing_info=["Pricing information"],
-                can_submit=False
-            )
-        
-        # Smart pricing: check if height-based calculation is needed
-        height_spec = collected.get('height', '')
-        calculated_price = self._calculate_height_based_pricing(relevant_chunks, collected)
-        
-        if calculated_price:
-            # Use calculated per-meter pricing
-            base_price = calculated_price['total_price']
-            price_unit = self.config['default_unit']
-            highest_chunk = calculated_price['source_chunk']
-            print(f"Using height-based pricing: ${base_price} (breakdown: {calculated_price['breakdown']})")
-        else:
-            # Fall back to smart pricing logic - filter by relevance first
-            chunks_with_prices = []
-            for chunk in relevant_chunks:
-                metadata = chunk.get('metadata', {})
-                content = chunk.get('content', '').lower()
-                
-                # Only consider chunks that are actually relevant to the item
-                if self._is_relevant_chunk(item_name, content):
-                    price = metadata.get('base_price') or metadata.get('price', 0)
-                    if price:
-                        try:
-                            price_val = float(price)
-                            # Filter out unrealistic prices using config threshold
-                            if price_val <= self.config['max_price_threshold']:
-                                chunks_with_prices.append({'chunk': chunk, 'price': price_val})
-                        except (ValueError, TypeError):
-                            continue
-            
-            if not chunks_with_prices:
-                # No relevant pricing found, use default
-                base_price = self.config['default_base_price']
-                price_unit = self.config['default_unit']
-                highest_chunk = None
-            else:
-                # Get most relevant price (not necessarily highest)
-                # For flooring, prefer per sqft/sqm pricing
-                if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
-                    # Look for per sqft pricing (most common in documents)
-                    psf_chunks = [c for c in chunks_with_prices if 'psf' in c['chunk'].get('content', '').lower() or 'per square foot' in c['chunk'].get('content', '').lower() or '/sqf' in c['chunk'].get('content', '').lower()]
-                    
-                    if psf_chunks:
-                        # Found per-sqft pricing - use it
-                        selected = min(psf_chunks, key=lambda x: x['price'])  # Use lowest unit price
-                        base_price = selected['price']
-                        highest_chunk = selected['chunk']
-                        price_unit = 'per sqft'
-                        
-                        # Convert sqm to sqft if quantity is in sqm (1 sqm = 10.764 sqft)
-                        if quantity_unit in ['sqm', 'sq m', 'square meter']:
-                            quantity = quantity * 10.764
-                            print(f"Converted {quantity/10.764:.2f} sqm to {quantity:.2f} sqft for per-sqft pricing")
-                    else:
-                        # Fallback: Look for per sqm pricing
-                        sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['chunk'].get('content', '').lower() or 'per sqm' in c['chunk'].get('content', '').lower()]
-                        if sqm_chunks:
-                            selected = min(sqm_chunks, key=lambda x: x['price'])
-                            base_price = selected['price']
-                            highest_chunk = selected['chunk']
-                            price_unit = 'per sqm'
-                        else:
-                            # Last resort: use any relevant pricing
-                            selected = max(chunks_with_prices, key=lambda x: x['price'])
-                            highest_chunk = selected['chunk']
-                            chunk_price = selected['price']
-                            chunk_metadata = highest_chunk.get('metadata', {})
-                            price_unit = chunk_metadata.get('price_unit', self.config['default_unit'])
-                            base_price = chunk_price
-                else:
-                    # For other services, use highest relevant price
-                    selected = max(chunks_with_prices, key=lambda x: x['price'])
-                    highest_chunk = selected['chunk']
-                    chunk_price = selected['price']
-                    chunk_metadata = highest_chunk.get('metadata', {})
-                    price_unit = chunk_metadata.get('price_unit', self.config['default_unit'])
-                    base_price = chunk_price
-        
-        # Calculate adjustments
-        adjustments = self._calculate_adjustments(collected, base_price)
-        
-        # Calculate total
-        total_price = self._calculate_total(base_price, quantity, adjustments)
-        
-        # Get conditions
-        conditions = self._extract_conditions(highest_chunk, collected)
-        
-        # Get source references from ChromaDB metadata
-        source_refs = []
-        for chunk in relevant_chunks:
-            metadata = chunk.get('metadata', {})
-            doc_name = metadata.get('document_name', 'Unknown')
-            source = metadata.get('source', doc_name)
-            source_refs.append(source)
-        
-        # Check for missing information
-        missing_info = self._check_missing_info(collected)
-        
-        return DraftQuotePreview(
-            item_name=item_name,
-            base_price=base_price,
-            unit=price_unit,
-            quantity=quantity,
-            adjustments=adjustments,
-            total_price=total_price,
-            conditions=conditions,
-            source_references=source_refs,
-            missing_info=missing_info,
-            can_submit=len(missing_info) == 0
-        )
-    
-    def _calculate_from_tree(
+    def _calculate_ai_driven_quote(
         self,
         db: Session,
         enquiry: Enquiry,
         collected: Dict[str, Any]
     ) -> DraftQuotePreview:
-        """Calculate quote from decision tree data"""
-        from app.models import DecisionTree
+        """Calculate quote using AI-driven decisions instead of hardcoded logic"""
         
-        # Get the tree
-        tree = db.query(DecisionTree).filter(DecisionTree.id == enquiry.service_tree_id).first()
-        if not tree:
-            return self._empty_quote("Service tree not found")
+        # Step 1: Classify the service using AI
+        item_name = collected.get('item', self.config['default_item_name'])
+        service_info = ai_pricing_service.classify_service_type(item_name, collected)
         
-        service_name = tree.service_name
+        print(f"AI Service Classification: {service_info}")
         
-        # Build item name and search query based on service type
-        if service_name == 'court_markings':
-            return self._calculate_court_markings(db, collected)
-        else:
-            # Generic tree-based calculation
-            return self._calculate_generic_tree(db, tree, collected)
-    
-    def _calculate_court_markings(
-        self,
-        db: Session,
-        collected: Dict[str, Any]
-    ) -> DraftQuotePreview:
-        """Calculate court markings quote from tree data"""
+        # Step 2: Determine quantity and unit using AI
+        quantity, unit = ai_pricing_service.determine_quantity_and_unit(collected, service_info)
         
-        court_type = collected.get('court_type', 'Unknown')
+        print(f"AI Quantity/Unit Determination: {quantity} {unit}")
         
-        # Build descriptive item name
-        item_parts = [court_type, "Court Markings"]
+        # Step 3: Search for relevant pricing chunks with enhanced query building
+        # Build multiple search variations to maximize chances of finding relevant data
+        search_queries = [item_name]
         
-        # Add court-specific details
-        if court_type == 'Basketball':
-            size = collected.get('basketball_size', '')
-            need_3pt = collected.get('need_3pt_line', False)
-            
-            if size:
-                item_parts.insert(1, size)
-            
-            search_query = f"{court_type} court markings {size}"
-            if need_3pt:
-                search_query += " 3-point line"
-                item_parts.append("with 3-point line")
-            else:
-                search_query += " no 3-point line"
+        # Add query with material
+        if collected.get('material'):
+            search_queries.append(f"{item_name} {collected['material']}")
         
-        elif court_type == 'Pickleball':
-            num_courts = collected.get('pickleball_courts', self.config['default_quantity'])
-            item_parts.insert(1, f"{num_courts}x")
-            search_query = f"pickleball court markings {num_courts} courts"
+        # Add query with area/service type
+        if collected.get('area_service_type'):
+            search_queries.append(f"{item_name} {collected['area_service_type']}")
         
-        elif court_type == 'Tennis':
-            num_courts = collected.get('tennis_courts', self.config['default_quantity'])
-            item_parts.insert(1, f"{num_courts}x")
-            search_query = f"tennis court markings {num_courts} courts"
+        # Add comprehensive query
+        comprehensive_query = item_name
+        if collected.get('material'):
+            comprehensive_query += f" {collected['material']}"
+        if collected.get('special_features'):
+            features = collected['special_features']
+            if isinstance(features, list):
+                comprehensive_query += " " + " ".join(features)
+        search_queries.append(comprehensive_query)
         
-        else:
-            search_query = f"{court_type} court markings"
+        # Search with all queries and combine results
+        all_chunks = []
+        seen_chunk_ids = set()
+        for query in search_queries:
+            chunks = self._find_relevant_chunks(db, query)
+            for chunk in chunks:
+                chunk_id = chunk.get('id') or str(chunk.get('content', ''))[:50]
+                if chunk_id not in seen_chunk_ids:
+                    seen_chunk_ids.add(chunk_id)
+                    all_chunks.append(chunk)
         
-        item_name = " ".join(item_parts)
-        
-        print(f"Court Markings Quote - Item: {item_name}")
-        print(f"Search query: {search_query}")
-        print(f"Collected data: {collected}")
-        
-        # Search for pricing in knowledge base
-        relevant_chunks = self._find_relevant_chunks(db, search_query)
+        relevant_chunks = all_chunks[:self.config['search_limit']]  # Limit total results
         
         if not relevant_chunks:
-            print(f"No pricing found for: {search_query}")
-            return self._empty_quote(f"No pricing found for {item_name}")
+            return self._empty_quote(f"No pricing information found for {item_name}")
         
-        # Extract pricing from chunks
-        chunks_with_prices = []
-        for chunk in relevant_chunks:
-            metadata = chunk.get('metadata', {})
-            price = metadata.get('base_price') or metadata.get('price', 0)
-            if price:
-                try:
-                    chunks_with_prices.append({
-                        'chunk': chunk,
-                        'price': float(price),
-                        'content': chunk.get('content', '')
-                    })
-                    print(f"Found price: ${price} - {chunk.get('content', '')[:100]}")
-                except (ValueError, TypeError):
-                    continue
+        # Step 4: Use AI to analyze and select the best pricing option
+        pricing_analysis = ai_pricing_service.analyze_pricing_chunks(relevant_chunks, service_info, collected)
         
-        if not chunks_with_prices:
-            print(f"No valid prices in chunks")
-            return self._empty_quote(f"Pricing not available for {item_name}")
+        print(f"AI Pricing Analysis: {pricing_analysis}")
         
-        # Get highest price (most comprehensive option)
-        highest = max(chunks_with_prices, key=lambda x: x['price'])
-        highest_chunk = highest['chunk']
-        base_price = highest['price']
-        price_unit = highest_chunk.get('metadata', {}).get('price_unit', self.config['court_markings_default_unit'])
+        if pricing_analysis['selected_index'] == -1:
+            return self._empty_quote(f"No suitable pricing found for {item_name}")
         
-        print(f"Selected price: ${base_price} {price_unit}")
+        # Get the selected chunk
+        selected_chunk = relevant_chunks[pricing_analysis['selected_index']]
+        selected_metadata = selected_chunk.get('metadata', {})
         
-        # Quantity is typically 1 for court markings
-        quantity = self.config['default_quantity']
+        # Use AI-extracted material-specific price if available (for multi-option documents)
+        if pricing_analysis.get('selected_material_price'):
+            base_price = float(pricing_analysis['selected_material_price'])
+            if pricing_analysis.get('selected_material_unit'):
+                unit = pricing_analysis['selected_material_unit']
+        else:
+            # Fallback to metadata price
+            base_price = float(selected_metadata.get('base_price') or selected_metadata.get('price', 0))
         
-        # Calculate GST as adjustment
-        gst_amount = round(base_price * self.config['gst_rate'], 2)
-        adjustments = [
-            QuoteAdjustment(
-                description=self.config['gst_description'],
-                amount=gst_amount,
+        # Apply unit conversion if needed
+        if pricing_analysis.get('unit_conversion_needed', False):
+            conversion_factor = pricing_analysis.get('conversion_factor', 1.0)
+            base_price = base_price * conversion_factor
+            unit = pricing_analysis.get('final_unit', unit)
+        
+        # Step 5: Extract adjustments using AI
+        adjustment_data = ai_pricing_service.extract_pricing_adjustments(selected_chunk, service_info, collected)
+        
+        # Step 6: Calculate final pricing
+        pricing_calculation = ai_pricing_service.calculate_final_pricing(
+            base_price, quantity, unit, adjustment_data.get('adjustments', []), adjustment_data.get('gst_rate', 0.09)
+        )
+        
+        # Convert adjustments to QuoteAdjustment objects
+        adjustments = []
+        for adj in pricing_calculation['adjustments']:
+            adjustments.append(QuoteAdjustment(
+                description=adj['description'],
+                amount=float(adj['amount']) if isinstance(adj['amount'], (int, float)) else 0,
+                type=adj['type']
+            ))
+        
+        # Add GST as adjustment
+        if pricing_calculation['gst_amount'] > 0:
+            adjustments.append(QuoteAdjustment(
+                description=f"GST ({pricing_calculation['gst_rate']*100:.0f}%)",
+                amount=pricing_calculation['gst_amount'],
                 type="fixed"
-            )
-        ]
+            ))
         
-        # Calculate total with GST
-        total_price = round(base_price + gst_amount, 2)
-        
-        # Get conditions from knowledge base
-        conditions = self._extract_conditions(highest_chunk, collected)
+        # Get conditions from AI analysis
+        conditions = adjustment_data.get('conditions', [])
+        conditions.append(self.config['gst_notice'])
         
         # Get source references
         source_refs = []
-        for chunk in relevant_chunks[:3]:  # Top 3 sources
+        for chunk in relevant_chunks[:3]:
             metadata = chunk.get('metadata', {})
             source = metadata.get('source') or metadata.get('document_name', 'Knowledge Base')
             if source not in source_refs:
@@ -366,273 +146,83 @@ class QuoteCalculationEngine:
         return DraftQuotePreview(
             item_name=item_name,
             base_price=base_price,
-            unit=price_unit,
+            unit=unit,
             quantity=quantity,
             adjustments=adjustments,
-            total_price=total_price,
+            total_price=pricing_calculation['total_price'],
             conditions=conditions,
             source_references=source_refs,
             missing_info=[],
             can_submit=True
         )
     
-    def _calculate_generic_tree(
+    def calculate_draft_quote(
         self,
         db: Session,
-        tree: Any,
+        enquiry: Enquiry
+    ) -> DraftQuotePreview:
+        """Calculate draft quote from enquiry using AI-driven decisions"""
+        
+        # Get collected data
+        collected = enquiry.collected_data or {}
+        
+        # Check if this is from a decision tree
+        if enquiry.service_tree_id:
+            return self._calculate_from_tree(db, enquiry, collected)
+        
+        # Use AI-driven quote calculation instead of hardcoded logic
+        return self._calculate_ai_driven_quote(db, enquiry, collected)
+    
+    def _calculate_from_tree(
+        self,
+        db: Session,
+        enquiry: Enquiry,
         collected: Dict[str, Any]
     ) -> DraftQuotePreview:
-        """Generic calculation for any decision tree"""
+        """Calculate quote from decision tree data using AI-driven decisions"""
+        from app.models import DecisionTree
         
-        # Build item name from specific meaningful fields
-        item_parts = [tree.display_name]
-        search_parts = [tree.display_name]
+        # Get the tree
+        tree = db.query(DecisionTree).filter(DecisionTree.id == enquiry.service_tree_id).first()
+        if not tree:
+            return self._empty_quote("Service tree not found")
         
-        # Add area type if present
-        if collected.get('area_service_type'):
-            item_parts.append(f"({collected['area_service_type']})") 
-            search_parts.append(collected['area_service_type'])
+        # Let AI dynamically map decision tree data to pricing format
+        # No hardcoded values - AI figures out what to search for
+        mapped_data = {
+            'item': tree.display_name,  # Use display name as starting point
+        }
         
-        # Add area if present
+        # Intelligently map area/quantity data
         if collected.get('total_area'):
-            item_parts.append(f"{collected['total_area']}sqm")
-            search_parts.append(f"{collected['total_area']} sqm")
+            mapped_data['quantity_or_area'] = f"{collected['total_area']} sqm"
         
-        # Add finish type if present and meaningful
-        if collected.get('finish_type'):
-            search_parts.append(collected['finish_type'])
-        
-        # Add varnish type if present and meaningful  
+        # Intelligently map material/finish information
         if collected.get('varnish_type'):
-            search_parts.append(collected['varnish_type'])
+            mapped_data['material'] = collected['varnish_type']
         
-        item_name = " ".join(item_parts)
-        search_query = " ".join(search_parts)
+        # Build special features list from various tree fields
+        special_features = []
+        if collected.get('finish_type'):
+            special_features.append(f"{collected['finish_type']} finish")
+        if collected.get('area_service_type'):
+            special_features.append(collected['area_service_type'])
+        if special_features:
+            mapped_data['special_features'] = special_features
         
-        print(f"Generic Tree Quote - Item: {item_name}")
-        print(f"Search query: {search_query}")
-        print(f"Collected data: {collected}")
+        # Map location
+        if collected.get('site_address'):
+            mapped_data['location'] = collected['site_address']
         
-        # Extract area/quantity/height from collected data
-        import re
-        total_area = collected.get('total_area') or collected.get('area') or collected.get('quantity_or_area')
-        ladder_height = collected.get('ladder_height')  # For cat ladder / height-based services
-        quantity = 1  # Default quantity
-        quantity_unit = 'per unit'
-        is_ladder_service = False
+        # Keep all original tree data for AI to use
+        for key, value in collected.items():
+            if key not in mapped_data and value:
+                mapped_data[key] = value
         
-        # Check if this is a height-based service (cat ladder)
-        if ladder_height:
-            is_ladder_service = True
-            try:
-                height_val = float(ladder_height)
-                quantity = height_val
-                quantity_unit = 'meter'
-                print(f"Parsed ladder height from tree: {height_val}m")
-            except (ValueError, TypeError):
-                print(f"Could not parse ladder height: {ladder_height}")
-        elif total_area:
-            try:
-                # Parse numeric area
-                area_val = float(total_area)
-                quantity = area_val
-                quantity_unit = 'sqm'  # Assume square meters from decision tree
-                print(f"Parsed area from tree: {area_val} sqm")
-            except (ValueError, TypeError):
-                print(f"Could not parse area: {total_area}")
-        
-        # Search and calculate - use broader search to find per-unit pricing
-        # Let the documents/AI decide the unit type - no hardcoding
-        unit_search_query = search_query + " price rate cost per"
-        relevant_chunks = self._find_relevant_chunks(db, unit_search_query)
-        
-        if not relevant_chunks:
-            return self._empty_quote(f"No pricing found for {item_name}")
-        
-        # Apply same relevance filtering as main quote engine
-        chunks_with_prices = []
-        for chunk in relevant_chunks:
-            metadata = chunk.get('metadata', {})
-            content = chunk.get('content', '').lower()
-            
-            # Only consider chunks that are actually relevant to the item
-            if self._is_relevant_chunk(item_name, content):
-                price = metadata.get('base_price') or metadata.get('price', 0)
-                if price:
-                        try:
-                            price_val = float(price)
-                            # Filter out unrealistic prices using config threshold
-                            if price_val <= self.config['max_price_threshold']:
-                                chunks_with_prices.append({
-                                    'chunk': chunk,
-                                    'price': price_val,
-                                    'content': content,
-                                    'metadata': metadata
-                                })
-                                print(f"Found chunk with price: ${price_val}, unit: {metadata.get('price_unit')}, content: {content[:100]}")
-                        except (ValueError, TypeError):
-                            continue
-        
-        if not chunks_with_prices:
-            return self._empty_quote(f"Pricing not available for {item_name}")
-        
-        # Select best pricing based on service type - fully dynamic, no hardcoding
-        selected_chunk = None
-        base_price_per_unit = None
-        final_unit = quantity_unit
-        
-        # Filter by material if specified (for any service, not just ladders)
-        material = collected.get('material', '')
-        material_filtered_chunks = chunks_with_prices
-        
-        if material:
-            material_lower = material.lower()
-            # Try to filter by material mentioned in content
-            material_matches = [c for c in chunks_with_prices 
-                               if any(mat_word in c['content'].lower() 
-                                     for mat_word in material_lower.split())]
-            if material_matches:
-                material_filtered_chunks = material_matches
-                print(f"Filtered by material '{material}': {len(material_matches)} chunks")
-        
-        # Smart selection based on service type
-        if any(keyword in item_name.lower() for keyword in self.config['flooring_keywords']):
-            print(f"Detected flooring service, looking for per-sqft/sqm pricing")
-            
-            # First priority: look for per sqft pricing (most common in documents)
-            psf_chunks = [c for c in chunks_with_prices if 'psf' in c['content'] or 'per square foot' in c['content'] or '/sqf' in c['content']]
-            
-            if psf_chunks:
-                # Found per-sqft pricing
-                selected = min(psf_chunks, key=lambda x: x['price'])  # Use lowest unit price for per-sqft
-                base_price_per_unit = selected['price']
-                selected_chunk = selected['chunk']
-                final_unit = 'per sqft'
-                print(f"Using per sqft pricing: ${base_price_per_unit}/sqft")
-                
-                # Convert sqm to sqft for calculation (1 sqm = 10.764 sqft)
-                if quantity_unit == 'sqm':
-                    area_in_sqft = quantity * 10.764
-                    print(f"Converting {quantity} sqm to {area_in_sqft:.2f} sqft")
-                    quantity = area_in_sqft
-                    quantity_unit = 'sqft'
-            else:
-                # Fallback: look for per sqm pricing
-                sqm_chunks = [c for c in chunks_with_prices if 'sqm' in c['content'] or 'per sqm' in c['content']]
-                if sqm_chunks:
-                    selected = min(sqm_chunks, key=lambda x: x['price'])
-                    base_price_per_unit = selected['price']
-                    selected_chunk = selected['chunk']
-                    final_unit = 'per sqm'
-                    print(f"Using per sqm pricing: ${base_price_per_unit}/sqm")
-                else:
-                    # Last resort: use package pricing (not ideal for large areas)
-                    selected = max(chunks_with_prices, key=lambda x: x['price'])
-                    base_price_per_unit = selected['price']
-                    selected_chunk = selected['chunk']
-                    final_unit = selected['metadata'].get('price_unit', 'per unit')
-                    quantity = 1  # Package pricing is per job, not per sqm
-                    print(f"WARNING: Using package pricing ${base_price_per_unit} (no per-unit pricing found)")
-        else:
-            # For other services (ladders, etc), score by relevance to item_name
-            # Don't just pick lowest/highest price - pick most RELEVANT chunk
-            def score_relevance(chunk_data):
-                """Score how relevant a chunk is to the requested service"""
-                content_lower = chunk_data['content'].lower()
-                item_lower = item_name.lower()
-                score = 0
-                
-                # Check for key item_name words in content
-                item_words = [w for w in item_lower.split() if len(w) > 2]
-                for word in item_words:
-                    if word in content_lower:
-                        score += 10
-                
-                # Bonus for exact service match
-                if tree.display_name.lower() in content_lower:
-                    score += 20
-                
-                # Bonus for material match
-                material = collected.get('material', '')
-                if material:
-                    material_words = material.lower().split()
-                    for word in material_words:
-                        if len(word) > 2 and word in content_lower:
-                            score += 15
-                
-                return score
-            
-            # Score all material-filtered chunks
-            scored_chunks = [(score_relevance(c), c) for c in material_filtered_chunks]
-            scored_chunks.sort(reverse=True, key=lambda x: x[0])
-            
-            # Log top 3 scored chunks
-            print(f"Top scored chunks:")
-            for i, (score, chunk_data) in enumerate(scored_chunks[:3]):
-                print(f"  {i+1}. Score {score}: ${chunk_data['price']} {chunk_data['metadata'].get('price_unit')} - {chunk_data['content'][:80]}")
-            
-            # Select highest scored chunk (most relevant)
-            if scored_chunks:
-                selected = scored_chunks[0][1]  # Get chunk from (score, chunk) tuple
-                base_price_per_unit = selected['price']
-                selected_chunk = selected['chunk']
-                # Get unit from chunk metadata
-                final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
-                
-                # SPECIAL HANDLING FOR LADDER: Normalize "per 0.5meter run" to "per meter"
-                if is_ladder_service and final_unit and '0.5' in final_unit.lower():
-                    # Price is per 0.5m, so convert to per 1m
-                    base_price_per_unit = base_price_per_unit * 2
-                    final_unit = 'per meter'
-                    print(f"Normalized ladder pricing: ${base_price_per_unit} {final_unit} (was per 0.5m)")
-                else:
-                    print(f"Using pricing from documents (score {scored_chunks[0][0]}): ${base_price_per_unit} {final_unit}")
-            else:
-                # Fallback if no scored chunks
-                selected = material_filtered_chunks[0]
-                base_price_per_unit = selected['price']
-                selected_chunk = selected['chunk']
-                final_unit = selected['metadata'].get('price_unit', self.config['generic_tree_default_unit'])
-                
-                # SPECIAL HANDLING FOR LADDER: Normalize "per 0.5meter run" to "per meter"
-                if is_ladder_service and final_unit and '0.5' in final_unit.lower():
-                    base_price_per_unit = base_price_per_unit * 2
-                    final_unit = 'per meter'
-                    print(f"Normalized ladder pricing: ${base_price_per_unit} {final_unit} (was per 0.5m)")
-                else:
-                    print(f"Using fallback pricing: ${base_price_per_unit} {final_unit}")
-        
-        # Calculate total: base_price_per_unit × quantity
-        subtotal = base_price_per_unit * quantity
-        
-        # Calculate GST as adjustment
-        gst_amount = round(subtotal * self.config['gst_rate'], 2)
-        adjustments = [
-            QuoteAdjustment(
-                description=self.config['gst_description'],
-                amount=gst_amount,
-                type="fixed"
-            )
-        ]
-        
-        total_price = round(subtotal + gst_amount, 2)
-        
-        print(f"Final calculation: ${base_price_per_unit} × {quantity} {quantity_unit} = ${subtotal} (before GST)")
-        print(f"GST (9%): ${gst_amount}")
-        print(f"Total with GST: ${total_price}")
-        
-        return DraftQuotePreview(
-            item_name=item_name,
-            base_price=base_price_per_unit,
-            unit=final_unit,
-            quantity=quantity,
-            adjustments=adjustments,
-            total_price=total_price,
-            conditions=self._extract_conditions(selected_chunk, collected),
-            source_references=[],
-            missing_info=[],
-            can_submit=True
-        )
+        # Use AI-driven calculation - AI will search knowledge base and calculate pricing
+        return self._calculate_ai_driven_quote(db, enquiry, mapped_data)
+    
+    
     
     def _empty_quote(self, reason: str) -> DraftQuotePreview:
         """Return an empty quote with error message"""
@@ -665,221 +255,12 @@ class QuoteCalculationEngine:
         # Return ChromaDB results directly (they have all metadata)
         return vector_results
     
-    def _is_relevant_chunk(self, item_name: str, content: str) -> bool:
-        """Check if a chunk is actually relevant to the requested item"""
-        
-        item_lower = item_name.lower()
-        content_lower = content.lower()
-        
-        # Define service categories and their keywords - loaded from config
-        service_keywords = {
-            'flooring': self.config['flooring_keywords'],
-            'painting': ['paint', 'painting', 'repaint', 'exterior', 'interior', 'wall', 'ceiling'],
-            'electrical': ['electrical', 'wiring', 'power', 'lighting', 'switch', 'outlet', 'circuit'],
-            'plumbing': ['plumbing', 'pipe', 'water', 'drain', 'toilet', 'sink', 'faucet'],
-            'construction': ['construction', 'renovation', 'renovate', 'build', 'install', 'installation']
-        }
-        
-        # Identify the service category from item name
-        item_category = None
-        for category, keywords in service_keywords.items():
-            if any(keyword in item_lower for keyword in keywords):
-                item_category = category
-                break
-        
-        if not item_category:
-            # If we can't categorize, be more lenient
-            return True
-        
-        # Check if content matches the service category
-        category_keywords = service_keywords[item_category]
-        content_matches_category = any(keyword in content_lower for keyword in category_keywords)
-        
-        # Also check for obvious mismatches
-        other_categories = [cat for cat in service_keywords.keys() if cat != item_category]
-        content_matches_other = any(
-            any(keyword in content_lower for keyword in service_keywords[cat]) 
-            for cat in other_categories
-        )
-        
-        # Relevant if it matches the category OR doesn't strongly match other categories
-        # This makes the filter more lenient to avoid $0 pricing
-        return content_matches_category or not content_matches_other
     
-    def _calculate_height_based_pricing(
-        self,
-        chunks: List[Dict],
-        collected_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Calculate pricing based on height (per-meter) if applicable"""
-        
-        height_str = collected_data.get('height', '')
-        if not height_str:
-            return None
-        
-        # Extract numeric height
-        import re
-        height_match = re.search(r'(\d+(?:\.\d+)?)\s*(m|meter|metre|ft|feet)', str(height_str).lower())
-        if not height_match:
-            return None
-        
-        height_value = float(height_match.group(1))
-        height_unit = height_match.group(2)
-        
-        # Convert feet to meters if needed
-        if height_unit in ['ft', 'feet']:
-            height_value = height_value * self.config['feet_to_meters']
-        
-        # Look for per-meter pricing in chunks
-        per_meter_rate = None
-        cage_rung_rate = None
-        access_door_price = None
-        source_chunk = None
-        
-        for chunk in chunks:
-            content = chunk.get('content', '').lower()
-            
-            # Look for per-meter pricing patterns
-            # Pattern: "$550/m run" or "$550 per meter"
-            if '/m run' in content or 'per m' in content or 'per meter' in content:
-                meter_match = re.search(r'\$?\s*(\d+(?:\.\d+)?)\s*(?:/m|per\s*m(?:eter)?)', content)
-                if meter_match and (not per_meter_rate or float(meter_match.group(1)) > per_meter_rate):
-                    per_meter_rate = float(meter_match.group(1))
-                    source_chunk = chunk
-            
-            # Look for cage rung pricing
-            if 'cage' in content and 'rung' in content:
-                rung_match = re.search(r'\$?\s*(\d+(?:\.\d+)?)\s*/\s*(?:cage\s*)?rung', content)
-                if rung_match:
-                    cage_rung_rate = float(rung_match.group(1))
-            
-            # Look for access door pricing
-            if 'access door' in content or 'door' in content:
-                door_match = re.search(r'\$?\s*(\d+(?:\.\d+)?)\s*(?:access\s*)?door', content)
-                if door_match:
-                    access_door_price = float(door_match.group(1))
-        
-        if not per_meter_rate:
-            return None
-        
-        # Calculate total based on height
-        total = height_value * per_meter_rate
-        breakdown = f"${per_meter_rate}/m × {height_value}m"
-        
-        # Add cage rungs if applicable (estimate ~2 rungs per meter)
-        special_features = collected_data.get('special_features', [])
-        if isinstance(special_features, list):
-            features_str = ' '.join(special_features).lower()
-        else:
-            features_str = str(special_features).lower()
-        
-        if cage_rung_rate and ('cage' in features_str or 'safety cage' in features_str):
-            estimated_rungs = int(height_value * self.config['rungs_per_meter'])  # Configurable rungs per meter
-            cage_cost = estimated_rungs * cage_rung_rate
-            total += cage_cost
-            breakdown += f" + {estimated_rungs} rungs × ${cage_rung_rate}"
-        
-        if access_door_price and ('door' in features_str or 'access door' in features_str):
-            total += access_door_price
-            breakdown += f" + door ${access_door_price}"
-        
-        return {
-            'total_price': round(total, 2),
-            'source_chunk': source_chunk,
-            'breakdown': breakdown
-        }
 
     
-    def _calculate_adjustments(
-        self,
-        collected_data: Dict[str, Any],
-        base_price: float
-    ) -> List[QuoteAdjustment]:
-        """Calculate price adjustments - ONLY from knowledge base, no hardcoded values"""
-        adjustments = []
-        
-        # NO hardcoded adjustments
-        # All pricing adjustments must come from the knowledge base documents
-        # If adjustments are needed, they should be extracted from ChromaDB metadata
-        # or document content during processing
-        
-        return adjustments
     
-    def _calculate_total(
-        self,
-        base_price: float,
-        quantity: Any,
-        adjustments: List[QuoteAdjustment]
-    ) -> float:
-        """Calculate total price with GST"""
-        
-        # Parse quantity
-        try:
-            qty = float(quantity) if quantity else 1
-        except (ValueError, TypeError):
-            qty = 1
-        
-        # Start with base
-        subtotal = base_price * qty
-        
-        # Apply adjustments
-        for adj in adjustments:
-            if adj.type == "fixed":
-                subtotal += adj.amount
-            elif adj.type == "percentage":
-                subtotal += (subtotal * adj.amount / 100)
-        
-        # Add GST (always applied)
-        subtotal_with_gst = subtotal * self.config['gst_multiplier']
-        
-        return round(subtotal_with_gst, 2)
     
-    def _extract_conditions(
-        self,
-        chunk: Dict,
-        collected_data: Dict[str, Any]
-    ) -> List[str]:
-        """Extract applicable conditions ONLY from knowledge base - no hardcoded conditions"""
-        conditions = []
-        
-        # ONLY from ChromaDB metadata (from uploaded documents)
-        if chunk:
-            metadata = chunk.get('metadata', {})
-            chunk_conditions = metadata.get('conditions')
-            
-            if chunk_conditions:
-                if isinstance(chunk_conditions, list):
-                    conditions.extend(chunk_conditions)
-                elif isinstance(chunk_conditions, str):
-                    # Split by pipe if it's a concatenated string
-                    conditions.extend([c.strip() for c in chunk_conditions.split('|')])
-                elif isinstance(chunk_conditions, dict):
-                    conditions.extend(chunk_conditions.values())
-        
-        # Add delivery location info (not a pricing condition, just contextual)
-        if collected_data.get('location'):
-            conditions.append(f"Delivery to: {collected_data['location']}")
-        
-        # Always add GST notice
-        conditions.append(self.config['gst_notice'])
-        
-        return conditions
     
-    def _check_missing_info(self, collected_data: Dict[str, Any]) -> List[str]:
-        """Check what information is still missing"""
-        missing = []
-        
-        required_fields = {
-            'item': 'Product/service type',
-            'quantity': 'Quantity or area',
-            'location': 'Location/address'
-        }
-        
-        for key, label in required_fields.items():
-            if not collected_data.get(key):
-                missing.append(label)
-        
-        return missing
     
     def create_quote_from_draft(
         self,
