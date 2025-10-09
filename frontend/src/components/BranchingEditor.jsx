@@ -7,6 +7,7 @@ export default function BranchingEditor({ treeConfig, onChange }) {
   const [connectingFrom, setConnectingFrom] = useState(null);
   const [startQuestion, setStartQuestion] = useState(treeConfig?.start_question || null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [choicesInput, setChoicesInput] = useState('');
 
   useEffect(() => {
     // Update parent when questions change
@@ -16,6 +17,15 @@ export default function BranchingEditor({ treeConfig, onChange }) {
       start_question: startQuestion || (questions.length > 0 ? questions[0].id : null)
     });
   }, [questions, startQuestion]);
+
+  useEffect(() => {
+    if (!selectedQuestion || selectedQuestion.type !== 'choice') {
+      setChoicesInput('');
+      return;
+    }
+
+    setChoicesInput((selectedQuestion.choices || []).join(', '));
+  }, [selectedQuestion?.id, selectedQuestion?.type]);
 
   const addQuestion = () => {
     const newQuestion = {
@@ -255,15 +265,37 @@ export default function BranchingEditor({ treeConfig, onChange }) {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Choices (comma separated)
                   </label>
-                  <input
-                    type="text"
-                    value={(selectedQuestion.choices || []).join(', ')}
-                    onChange={(e) => updateQuestion(selectedQuestion.id, {
-                      choices: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    placeholder="Option 1, Option 2, Option 3"
+                  <textarea
+                    value={choicesInput}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setChoicesInput(value);
+                      const parsedChoices = value
+                        .split(',')
+                        .map((choice) => choice.trim())
+                        .filter(Boolean);
+
+                      updateQuestion(selectedQuestion.id, {
+                        choices: parsedChoices
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      // Explicitly allow space key
+                      if (e.key === ' ' || e.code === 'Space') {
+                        e.stopPropagation(); // Prevent any parent handlers
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                    rows="3"
+                    placeholder="Stainless Steel (SS304), Galvanized Mild Steel (HDG), Aluminum"
+                    spellCheck={false}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    ✓ Separate each choice with a comma. Spaces within choices are fully supported.
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Example: "Stainless Steel (SS304), Galvanized Mild Steel (HDG), Aluminum"
+                  </p>
                 </div>
               )}
 
