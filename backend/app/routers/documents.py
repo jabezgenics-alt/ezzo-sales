@@ -704,3 +704,37 @@ def cleanup_all_documents(
         response["failed_files"] = failed_files
     
     return response
+
+
+@router.get("/drawings/{product_name}")
+async def get_product_drawing(product_name: str):
+    """Serve product technical drawing (e.g., cat ladder drawing)"""
+    from fastapi.responses import FileResponse, Response
+    
+    # Get drawing filename from config
+    if product_name not in settings.PRODUCT_DRAWINGS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No drawing available for product: {product_name}"
+        )
+    
+    filename = settings.PRODUCT_DRAWINGS[product_name]
+    file_path = Path(settings.UPLOAD_DIR) / filename
+    
+    # Check if file exists
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Drawing file not found: {filename}"
+        )
+    
+    # Return the PDF file with inline disposition so the browser can preview it
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/pdf",
+        filename=filename,
+        headers={
+            "Content-Disposition": f"inline; filename={filename}",
+            "Cache-Control": "public, max-age=3600"
+        }
+    )

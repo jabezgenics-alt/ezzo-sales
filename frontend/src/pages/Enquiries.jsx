@@ -7,6 +7,12 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/axios";
 import { useAuth } from "@/hooks/useAuth";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Worker, Viewer, SpecialZoomLevel } from "@react-pdf-viewer/core";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import { zoomPlugin } from "@react-pdf-viewer/zoom";
+import "@react-pdf-viewer/zoom/lib/styles/index.css";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 
 export default function Enquiries() {
   const [value, setValue] = useState("");
@@ -18,10 +24,27 @@ export default function Enquiries() {
   const [error, setError] = useState(null);
   const [streamingMessage, setStreamingMessage] = useState(null);
   const messagesEndRef = useRef(null);
+  const [activeDrawing, setActiveDrawing] = useState(null);
   const { token } = useAuth();
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
+  const pdfWorkerUrl = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  const zoomPluginInstance = zoomPlugin();
+
+  const handleDownloadDrawing = (url, filename) => {
+    if (!url) return;
+    const link = document.createElement("a");
+    link.href = url;
+    if (filename) {
+      link.download = filename;
+    }
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -97,6 +120,14 @@ export default function Enquiries() {
                   ...prev,
                   content: data.message,
                   draft_quote: data.draft_quote
+                }));
+              } else if (data.type === 'drawing') {
+                // Handle product drawing
+                setStreamingMessage(prev => ({
+                  ...prev,
+                  content: data.message,
+                  drawing_url: data.drawing_url,
+                  filename: data.filename
                 }));
               } else if (data.type === 'error') {
                 setStreamingMessage(prev => ({
@@ -441,6 +472,83 @@ export default function Enquiries() {
                         {formatMessage(message.content)}
                       </div>
                     )}
+                    
+                    {/* Product Drawing Display */}
+                    {message.drawing_url && (
+                      <div className="rounded-lg border border-gray-200 mt-2 bg-white overflow-hidden">
+                        <div 
+                          className="cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setActiveDrawing({ url: message.drawing_url, filename: message.filename })}
+                        >
+                          <Worker workerUrl={pdfWorkerUrl}>
+                            <div className="h-64 bg-gray-50">
+                              <Viewer
+                                fileUrl={message.drawing_url}
+                                defaultScale={SpecialZoomLevel.PageWidth}
+                                theme="light"
+                              />
+                            </div>
+                          </Worker>
+                        </div>
+                      </div>
+                    )}
+      <Dialog.Root open={!!activeDrawing} onOpenChange={(open) => {
+        if (!open) {
+          setActiveDrawing(null);
+        }
+      }}>
+        {activeDrawing && (
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/60 z-50" />
+            <Dialog.Content className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
+                  <div>
+                    <Dialog.Title className="text-lg font-semibold text-gray-900">
+                      {activeDrawing.filename || "Technical Drawing"}
+                    </Dialog.Title>
+                    <Dialog.Description className="text-sm text-gray-500">
+                      Use the zoom controls below to view the drawing.
+                    </Dialog.Description>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Dialog.Close className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-gray-200 hover:bg-gray-100 text-gray-700" title="Close">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </Dialog.Close>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto bg-gray-100">
+                  <div className="flex flex-col items-center p-4 gap-4">
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+                      {zoomPluginInstance.ZoomOut && <zoomPluginInstance.ZoomOut />}
+                      {zoomPluginInstance.CurrentScale && (
+                        <div className="px-2">
+                          <zoomPluginInstance.CurrentScale>
+                            {(props) => <span className="text-sm font-medium">{`${Math.round(props.scale * 100)}%`}</span>}
+                          </zoomPluginInstance.CurrentScale>
+                        </div>
+                      )}
+                      {zoomPluginInstance.ZoomIn && <zoomPluginInstance.ZoomIn />}
+                    </div>
+                    <Worker workerUrl={pdfWorkerUrl}>
+                      <div className="w-full max-w-[900px] border border-gray-200 rounded overflow-hidden bg-white">
+                        <Viewer
+                          fileUrl={activeDrawing.url}
+                          defaultScale={SpecialZoomLevel.PageWidth}
+                          theme="light"
+                          plugins={[zoomPluginInstance]}
+                        />
+                      </div>
+                    </Worker>
+                  </div>
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        )}
+      </Dialog.Root>
                     
                     {/* Draft Quote Display */}
                     {message.draft_quote && (

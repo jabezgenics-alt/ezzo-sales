@@ -301,6 +301,31 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                     db.commit()
                     print(f"Matched service tree: {tree.service_name} (ID: {tree.id})")
         
+        # Check if user wants to see a drawing (before tree processing)
+        # Only check if there's a user message (not on initial enquiry creation)
+        if user_message and self._user_wants_drawing(user_message, enquiry):
+            # Show the product drawing
+            drawing_response = "Here's the technical drawing for the cat ladder:"
+            
+            # Save the message
+            drawing_msg = EnquiryMessage(
+                enquiry_id=enquiry.id,
+                role="assistant",
+                content=drawing_response
+            )
+            db.add(drawing_msg)
+            db.commit()
+            
+            # Stream the drawing response
+            yield {
+                'type': 'drawing',
+                'message': drawing_response,
+                'drawing_url': '/api/documents/drawings/cat_ladder',
+                'filename': 'CATLADDER WCAGE.pdf'
+            }
+            yield {'type': 'done'}
+            return
+        
         # If we have a decision tree, use tree-based questioning
         if tree:
             # Refresh the enquiry object to ensure it's bound to the session
@@ -602,8 +627,12 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
         # Get the next unanswered question
         next_q = tree_engine.get_next_question(tree, collected_data)
         
-        # If user provided a message AND tree has asked a question, process the answer
-        if user_message and next_q and tree_has_asked_question:
+        # Check if tree has any messages (has asked at least one question)
+        assistant_messages_count = len([m for m in enquiry.messages if m.role == "assistant"])
+        has_asked_question = assistant_messages_count > 0
+        
+        # If user provided a message AND tree has a pending question AND tree has asked at least once, process the answer
+        if user_message and next_q and has_asked_question:
             # Check if this was a context confirmation (from_context flag present)
             is_context_confirmation = (
                 next_q.key in collected_data and 
@@ -652,27 +681,52 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                         next_q = tree_engine.get_next_question(tree, collected_data)
                     else:
                         yield {
-                            'type': 'message',
+                            'type': 'content',
                             'content': f"I didn't quite understand that. {next_q.question}"
                         }
+                        yield {'type': 'done'}
                         return
             else:
                 # Normal answer processing
-                # First check if user is going sideways (asking a different question)
+                # First check if user wants to see a drawing
+                if self._user_wants_drawing(user_message, enquiry):
+                    # Show the product drawing
+                    drawing_response = "Here's the technical drawing for the cat ladder:"
+                    
+                    # Save the message
+                    drawing_msg = EnquiryMessage(
+                        enquiry_id=enquiry.id,
+                        role="assistant",
+                        content=drawing_response
+                    )
+                    db.add(drawing_msg)
+                    db.commit()
+                    
+                    # Yield drawing response
+                    yield {
+                        'type': 'drawing',
+                        'message': drawing_response,
+                        'drawing_url': '/api/documents/drawings/cat_ladder',
+                        'filename': 'CATLADDER WCAGE.pdf'
+                    }
+                    yield {'type': 'done'}
+                    return
+                
+                # Check if user is going sideways (asking a different question)
                 if self._is_sideways_question(user_message, next_q.type, next_q.question):
                     # Answer their sideways question
                     sideways_answer = self._answer_sideways_question(user_message, enquiry, db)
                     
-                    # Rephrase the pending question naturally
-                    rephrased_q = self._rephrase_question_naturally(
-                        next_q.question,
-                        next_q.type,
-                        next_q.choices,
-                        enquiry.messages
-                    )
+                    # Get the plain question without extra fluff for redirect
+                    plain_question = next_q.question
                     
-                    # Create redirect message
-                    redirect_message = f"{sideways_answer}\n\nNow, to continue with your quote: {rephrased_q}"
+                    # Add choices if it's a choice question
+                    if next_q.type == "choice" and next_q.choices:
+                        choices_text = ", ".join(next_q.choices)
+                        plain_question = f"{plain_question} Options: {choices_text}"
+                    
+                    # Create redirect message (simple and direct)
+                    redirect_message = f"{sideways_answer}\n\nNow, back to your quote - {plain_question}"
                     
                     # Save the AI's sideways response
                     sideways_msg = EnquiryMessage(
@@ -683,10 +737,15 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                     db.add(sideways_msg)
                     db.commit()
                     
-                    # Stream the response
+                    # Stream the response in chunks
                     yield {
-                        'type': 'message',
+                        'type': 'content',
                         'content': redirect_message
+                    }
+                    
+                    # Send done event
+                    yield {
+                        'type': 'done'
                     }
                     return
                 
@@ -733,16 +792,18 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                         else:
                             # Required question - ask AI to respond naturally
                             yield {
-                                'type': 'message',
+                                'type': 'content',
                                 'content': f"I need this information to provide an accurate quote: {next_q.question}"
                             }
+                            yield {'type': 'done'}
                             return
                     else:
                         # Failed to parse and not trying to skip - ask for clarification
                         yield {
-                            'type': 'message',
+                            'type': 'content',
                             'content': f"I didn't quite understand that. {next_q.question}"
                         }
+                        yield {'type': 'done'}
                         return
         
         # If no more questions, prepare draft
@@ -1171,6 +1232,68 @@ Examples:
             print(f"Error checking quote intent: {str(e)}")
             return False
     
+    def _user_wants_drawing(self, message: str, enquiry: Enquiry) -> bool:
+        """Detect if user wants to see a product drawing/design"""
+        try:
+            # Build context about what product they're discussing
+            product_context = ""
+            if enquiry.initial_message:
+                product_context = f"Customer request: {enquiry.initial_message}\n"
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Determine if the user wants to see a product drawing, design, or visual.
+
+Return JSON: {"wants_drawing": true/false}
+
+User wants drawing if they:
+- Ask "show me", "can I see", "let me see" + drawing/design/product
+- Ask "what does it look like", "how does it look"
+- Ask for "drawing", "design", "picture", "diagram", "technical drawing", "blueprint"
+- Ask to "show the product", "show your ladder"
+- Want visual representation
+
+User does NOT want drawing if they:
+- Just saying "ok", "thanks", "thank you", "yes", "no", "sure"
+- Answering a question (like "aluminum", "2m", "yes please")
+- Just asking about features or specifications in text
+- Asking "how much", "price", "cost" (pricing question)
+- General questions without visual request
+- Casual conversation or acknowledgments
+
+Examples:
+- "show me how the ladder looks" → {"wants_drawing": true}
+- "can I see a drawing?" → {"wants_drawing": true}
+- "what does the cat ladder look like?" → {"wants_drawing": true}
+- "show me the design" → {"wants_drawing": true}
+- "what materials do you have?" → {"wants_drawing": false}
+- "how much does it cost?" → {"wants_drawing": false}
+- "ok thanks" → {"wants_drawing": false}
+- "thank you" → {"wants_drawing": false}
+- "yes" → {"wants_drawing": false}
+- "aluminum" → {"wants_drawing": false}"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"{product_context}User message: {message}"
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=50
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result.get('wants_drawing', False)
+        except Exception as e:
+            print(f"Error detecting drawing request: {str(e)}")
+            # Fallback: check for explicit keywords
+            drawing_keywords = ['show me', 'can i see', 'what does it look like', 'drawing', 'design', 'picture']
+            return any(keyword in message.lower() for keyword in drawing_keywords)
+    
     def _should_offer_quote(self, enquiry: Enquiry, current_response: str) -> bool:
         """Determine if AI should offer to create a quote based on conversation context"""
         try:
@@ -1305,17 +1428,25 @@ Examples:
 Return JSON: {"is_sideways": true/false}
 
 The user IS going sideways (return true) if they:
-- Ask a completely different question (e.g., "what materials do you have?" when asked for height)
-- Ask about pricing/cost when we're collecting info
-- Ask general questions about the service/product
-- Ask "tell me about X" or "what is X"
+- Ask a question about a DIFFERENT topic than what was asked (e.g., "what materials?" when asked for location/height)
+- Ask about pricing/cost when we're collecting other info
+- Ask general questions about the service/product that don't answer the pending question
+- Ask "tell me about X", "what is X", "what do you have", "what options"
+- Ask about materials when asked for location
+- Ask about features when asked for measurements
 - Ask clarification about something OTHER than the current question
 
 The user is NOT going sideways (return false) if they:
-- Provide an answer to the question (even if informal)
-- Ask clarification about the CURRENT question (e.g., "what do you mean by height?")
+- Provide an answer to the question (even if informal or misspelled)
+- Ask clarification SPECIFICALLY about the current question being asked
 - Give a partial answer or express uncertainty but attempt to answer
 - Say they don't know or want to skip (this is still engaging with the question)
+- Provide a value, number, or choice that could be an answer
+- Restate their original request or quote intent (e.g., "I need quote for X" when asked first question)
+- Provide additional context about their request that helps answer the question
+
+IMPORTANT: If user asks about Topic A when the question is about Topic B, return TRUE!
+IMPORTANT: If user is just providing more context or restating their request, return FALSE!
 
 Examples:
 Pending question: "What height do you need?"
@@ -1325,7 +1456,22 @@ Pending question: "What height do you need?"
 - "what do you mean by height?" → {"is_sideways": false} (clarification of current question)
 - "how much will this cost?" → {"is_sideways": true}
 - "tell me about your company" → {"is_sideways": true}
-- "I don't know" → {"is_sideways": false} (engaging with the question)"""
+- "I don't know" → {"is_sideways": false} (engaging with the question)
+
+Pending question: "Where would you like it installed?"
+- "what materials do you have?" → {"is_sideways": true}
+- "roof access" → {"is_sideways": false}
+- "building" → {"is_sideways": false}
+- "can you show me options?" → {"is_sideways": false}
+- "tell me about SS316" → {"is_sideways": true}
+- "give me quote for 5m ladder" → {"is_sideways": false} (restating request, not sideways)
+- "I need quote for cat ladder installation" → {"is_sideways": false} (restating intent)
+
+Pending question: "What material would you prefer?"
+- "ss316" → {"is_sideways": false}
+- "aluminum" → {"is_sideways": false}
+- "where do you deliver?" → {"is_sideways": true}
+- "how long does installation take?" → {"is_sideways": true}"""
                     },
                     {
                         "role": "user",

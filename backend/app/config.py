@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, ClassVar, Dict
 
 
 class Settings(BaseSettings):
@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 10485760  # 10MB
+    
+    # Product Drawings (ClassVar so Pydantic doesn't treat as field)
+    PRODUCT_DRAWINGS: ClassVar[Dict[str, str]] = {
+        "cat_ladder": "CATLADDER WCAGE.pdf",
+        # Future: add more products
+    }
     
     # Admin
     ADMIN_EMAIL: str = "admin@ezzo.com"
