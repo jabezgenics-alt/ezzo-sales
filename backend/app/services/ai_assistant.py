@@ -554,6 +554,8 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
             
         except Exception as e:
             print(f"Error in AI streaming: {str(e)}")
+            import traceback
+            traceback.print_exc()
             yield {
                 'type': 'error',
                 'message': "I apologize, but I'm having trouble processing your request. Please try again."
@@ -656,7 +658,39 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                         return
             else:
                 # Normal answer processing
-                # First try to parse the answer based on question type
+                # First check if user is going sideways (asking a different question)
+                if self._is_sideways_question(user_message, next_q.type, next_q.question):
+                    # Answer their sideways question
+                    sideways_answer = self._answer_sideways_question(user_message, enquiry, db)
+                    
+                    # Rephrase the pending question naturally
+                    rephrased_q = self._rephrase_question_naturally(
+                        next_q.question,
+                        next_q.type,
+                        next_q.choices,
+                        enquiry.messages
+                    )
+                    
+                    # Create redirect message
+                    redirect_message = f"{sideways_answer}\n\nNow, to continue with your quote: {rephrased_q}"
+                    
+                    # Save the AI's sideways response
+                    sideways_msg = EnquiryMessage(
+                        enquiry_id=enquiry.id,
+                        role="assistant",
+                        content=redirect_message
+                    )
+                    db.add(sideways_msg)
+                    db.commit()
+                    
+                    # Stream the response
+                    yield {
+                        'type': 'message',
+                        'content': redirect_message
+                    }
+                    return
+                
+                # Try to parse the answer based on question type
                 parsed_answer = tree_engine.parse_answer(
                     user_message, 
                     next_q.type, 
@@ -1257,6 +1291,110 @@ Examples:
             quote_keywords = ['quote', 'quotation', 'confirm', 'proceed', 'finalize', 'complete']
             message_lower = message.lower()
             return any(keyword in message_lower for keyword in quote_keywords)
+    
+    def _is_sideways_question(self, user_message: str, expected_type: str, expected_question: str) -> bool:
+        """Detect if user is asking a question instead of answering the pending question"""
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Determine if the user is going "sideways" by asking a different question instead of answering the pending question.
+
+Return JSON: {"is_sideways": true/false}
+
+The user IS going sideways (return true) if they:
+- Ask a completely different question (e.g., "what materials do you have?" when asked for height)
+- Ask about pricing/cost when we're collecting info
+- Ask general questions about the service/product
+- Ask "tell me about X" or "what is X"
+- Ask clarification about something OTHER than the current question
+
+The user is NOT going sideways (return false) if they:
+- Provide an answer to the question (even if informal)
+- Ask clarification about the CURRENT question (e.g., "what do you mean by height?")
+- Give a partial answer or express uncertainty but attempt to answer
+- Say they don't know or want to skip (this is still engaging with the question)
+
+Examples:
+Pending question: "What height do you need?"
+- "what materials do you offer?" → {"is_sideways": true}
+- "3 meters" → {"is_sideways": false}
+- "not sure, maybe 2m?" → {"is_sideways": false}
+- "what do you mean by height?" → {"is_sideways": false} (clarification of current question)
+- "how much will this cost?" → {"is_sideways": true}
+- "tell me about your company" → {"is_sideways": true}
+- "I don't know" → {"is_sideways": false} (engaging with the question)"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Pending question: '{expected_question}'\nExpected type: {expected_type}\nUser said: '{user_message}'"
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=50
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            is_sideways = result.get('is_sideways', False)
+            
+            if is_sideways:
+                print(f"User going sideways: '{user_message}' when expecting {expected_type}")
+            
+            return is_sideways
+        except Exception as e:
+            print(f"Error checking sideways: {str(e)}")
+            return False  # Default to not sideways to avoid blocking valid answers
+    
+    def _answer_sideways_question(self, question: str, enquiry: Enquiry, db: Session) -> str:
+        """Answer user's sideways question briefly using KB and AI"""
+        try:
+            # Search KB for relevant info
+            kb_context = self._search_knowledge_base(question)
+            
+            # Build conversation context
+            conversation_context = ""
+            if enquiry.messages:
+                recent_msgs = enquiry.messages[-3:]
+                for msg in recent_msgs:
+                    conversation_context += f"{msg.role}: {msg.content}\n"
+            
+            # Use AI to generate brief, helpful answer
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"""You are answering a customer's side question during a quote collection process.
+
+Be helpful but BRIEF (2-3 sentences maximum). Answer their question directly.
+
+Recent conversation context:
+{conversation_context}
+
+Knowledge base context:
+{kb_context if kb_context else "No specific KB info found"}
+
+After you answer, the system will automatically redirect them back to the pending quote question."""
+                    },
+                    {
+                        "role": "user",
+                        "content": question
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=150
+            )
+            
+            answer = response.choices[0].message.content.strip()
+            print(f"Sideways answer generated: {answer[:100]}...")
+            return answer
+            
+        except Exception as e:
+            print(f"Error answering sideways question: {str(e)}")
+            return "I'd be happy to help with that! However, let's complete your quote first so I can give you accurate information."
     
     def _generate_tree_summary(self, tree: DecisionTree, collected_data: Dict[str, Any]) -> str:
         """Generate a human-readable summary from tree answers"""

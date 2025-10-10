@@ -279,8 +279,13 @@ Be flexible with casual language, slang, and typos. For example:
 Return JSON: {{\"value\": "exact_choice"}} where exact_choice is one of the provided options.
 If completely unclear, return {{\"value\": null}}"""
             elif question_type == 'text':
-                # For text questions, just clean and return the text
-                prompt = f"Clean up this text (fix obvious typos, trim whitespace): '{answer_text}'. Return JSON: {{\"value\": \"cleaned_text\"}}"
+                # For text questions, just return the text as-is (minimal processing)
+                # Don't use AI for simple text - just clean it up
+                cleaned = answer_text.strip()
+                if cleaned:
+                    return cleaned
+                else:
+                    return None
             else:
                 prompt = f"Extract the answer from: '{answer_text}'. Return JSON: {{\"value\": \"text\"}}"
             
