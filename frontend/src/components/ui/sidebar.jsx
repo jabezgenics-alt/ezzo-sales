@@ -135,7 +135,7 @@ export const MobileSidebar = ({
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-neutral-100 p-6 z-[100] flex flex-col justify-between",
+                "fixed h-full w-full inset-0 bg-neutral-100 p-6 z-[100] flex flex-col justify-between overflow-y-auto",
                 className
               )}
             >
@@ -330,10 +330,15 @@ const LogoIcon = () => {
 };
 
 const UserDropdown = ({ user, isAdmin, logout, open: sidebarOpen }) => {
-  const { open, animate } = useSidebar();
+  const { open, animate, setOpen } = useSidebar();
+  
+  const handleLogout = () => {
+    logout();
+    setOpen(false);
+  };
   
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <div className="flex items-center justify-start gap-2 group/sidebar py-2 cursor-pointer hover:bg-neutral-200 rounded-md px-2">
           <div className="h-7 w-7 flex-shrink-0 rounded-full bg-neutral-300 flex items-center justify-center">
@@ -350,7 +355,7 @@ const UserDropdown = ({ user, isAdmin, logout, open: sidebarOpen }) => {
           </motion.span>
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
+      <DropdownMenuContent align="start" className="w-48" style={{ zIndex: 200 }}>
         <div className="px-2 py-1.5 text-sm font-semibold">
           {user?.full_name || "User"}
         </div>
@@ -363,7 +368,7 @@ const UserDropdown = ({ user, isAdmin, logout, open: sidebarOpen }) => {
           </div>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout} className="cursor-pointer">
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </DropdownMenuItem>
