@@ -13,6 +13,7 @@ import {
   Database,
   LogOut,
   GitBranch,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Separator } from "@/components/ui/separator";
@@ -248,6 +249,11 @@ export function Sidebar() {
       label: "Decision Trees",
       href: "/admin/decision-trees",
       icon: <GitBranch className="text-neutral-700 h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "Business Rules",
+      href: "/admin/business-rules",
+      icon: <Shield className="text-neutral-700 h-5 w-5 flex-shrink-0" />,
     },
   ];
 

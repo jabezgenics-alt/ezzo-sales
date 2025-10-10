@@ -263,6 +263,46 @@ class DecisionTreeResponse(BaseModel):
         from_attributes = True
 
 
+# Business Rule Schemas
+class BusinessRuleCreate(BaseModel):
+    rule_name: str
+    service_type: Optional[str] = None
+    region: Optional[str] = None
+    rule_config: Dict[str, Any]
+    is_active: bool = True
+    priority: int = 100
+    source_reference: Optional[str] = None
+    description: Optional[str] = None
+
+
+class BusinessRuleUpdate(BaseModel):
+    rule_name: Optional[str] = None
+    service_type: Optional[str] = None
+    region: Optional[str] = None
+    rule_config: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
+    priority: Optional[int] = None
+    source_reference: Optional[str] = None
+    description: Optional[str] = None
+
+
+class BusinessRuleResponse(BaseModel):
+    id: int
+    rule_name: str
+    service_type: Optional[str]
+    region: Optional[str]
+    rule_config: Dict[str, Any]
+    is_active: bool
+    priority: int
+    source_reference: Optional[str]
+    description: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 # AI Response Schemas
 class AIQuestion(BaseModel):
     key: str

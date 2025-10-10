@@ -100,6 +100,22 @@ class DecisionTree(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class BusinessRule(Base):
+    __tablename__ = "business_rules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    rule_name = Column(String(255), nullable=False, index=True)
+    service_type = Column(String(255), nullable=True, index=True)
+    region = Column(String(50), nullable=True)
+    rule_config = Column(JSON, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    priority = Column(Integer, default=100, nullable=False)
+    source_reference = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
 class Enquiry(Base):
     __tablename__ = "enquiries"
     

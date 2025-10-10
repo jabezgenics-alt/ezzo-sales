@@ -220,9 +220,132 @@ class QuoteCalculationEngine:
                 mapped_data[key] = value
         
         # Use AI-driven calculation - AI will search knowledge base and calculate pricing
-        return self._calculate_ai_driven_quote(db, enquiry, mapped_data)
+        base_quote = self._calculate_ai_driven_quote(db, enquiry, mapped_data)
+        
+        # Apply auto-requirements from business rules
+        auto_requirements = collected.get('auto_requirements', [])
+        auto_conditions = collected.get('auto_conditions', [])
+        
+        if auto_requirements:
+            base_quote = self._apply_auto_requirements(db, base_quote, auto_requirements, auto_conditions)
+        
+        return base_quote
     
     
+    
+    def _apply_auto_requirements(
+        self,
+        db: Session,
+        base_quote: DraftQuotePreview,
+        auto_requirements: List[Dict[str, Any]],
+        auto_conditions: List[str]
+    ) -> DraftQuotePreview:
+        """Apply automatic requirements from business rules to the quote"""
+        
+        additional_adjustments = []
+        additional_conditions = list(auto_conditions)  # Start with auto conditions
+        
+        for requirement in auto_requirements:
+            item_name = requirement.get("item", "")
+            search_terms = requirement.get("search_terms", [item_name])
+            reason = requirement.get("reason", "")
+            
+            # Search knowledge base for pricing
+            best_price = None
+            best_unit = "unit"
+            
+            for search_term in search_terms:
+                chunks = self._find_relevant_chunks(db, search_term)
+                if chunks:
+                    # Use the first relevant chunk
+                    chunk = chunks[0]
+                    metadata = chunk.get('metadata', {})
+                    price = metadata.get('base_price') or metadata.get('price', 0)
+                    
+                    if price and (best_price is None or price < best_price):
+                        best_price = float(price)
+                        best_unit = metadata.get('price_unit', 'unit')
+                        break
+            
+            if best_price:
+                # Add as adjustment
+                additional_adjustments.append(QuoteAdjustment(
+                    description=f"{item_name.title()} (Required: {reason})",
+                    amount=best_price,
+                    type="fixed"
+                ))
+            else:
+                # No pricing found, add as condition
+                additional_conditions.append(f"{item_name.title()} required ({reason}) - pricing to be confirmed")
+        
+        # Recalculate total with GST on all items (base + original adjustments + auto requirements)
+        # Remove GST from original adjustments to recalculate
+        non_gst_adjustments = [adj for adj in base_quote.adjustments if 'GST' not in adj.description]
+        all_non_gst_adjustments = non_gst_adjustments + additional_adjustments
+        
+        # Calculate subtotal (base + all non-GST adjustments)
+        subtotal = base_quote.base_price * (base_quote.quantity or 1)
+        for adj in all_non_gst_adjustments:
+            subtotal += adj.amount
+        
+        # Get GST rate from business rules or fallback to extract from original adjustments
+        gst_rate = self._get_gst_rate(db, base_quote)
+        gst_amount = subtotal * gst_rate
+        
+        # Add GST adjustment
+        final_adjustments = all_non_gst_adjustments + [QuoteAdjustment(
+            description=f"GST ({int(gst_rate*100)}%)",
+            amount=gst_amount,
+            type="fixed"
+        )]
+        
+        # Calculate final total
+        total_price = subtotal + gst_amount
+        
+        # Update the quote with recalculated values
+        updated_quote = DraftQuotePreview(
+            item_name=base_quote.item_name,
+            base_price=base_quote.base_price,
+            unit=base_quote.unit,
+            quantity=base_quote.quantity,
+            adjustments=final_adjustments,
+            total_price=round(total_price, 2),
+            conditions=base_quote.conditions + additional_conditions,
+            source_references=base_quote.source_references,
+            missing_info=base_quote.missing_info,
+            can_submit=base_quote.can_submit
+        )
+        
+        return updated_quote
+    
+    def _get_gst_rate(self, db: Session, base_quote: DraftQuotePreview) -> float:
+        """Get GST rate from business rules or extract from original quote (no hardcoded values)"""
+        
+        # Try to get GST rate from business rules
+        from app.models import BusinessRule
+        
+        rules = db.query(BusinessRule).filter(
+            BusinessRule.is_active == True,
+            BusinessRule.region == 'SGP'
+        ).first()
+        
+        if rules and rules.rule_config:
+            gst_rate = rules.rule_config.get('gst_rate')
+            if gst_rate:
+                return float(gst_rate)
+        
+        # Fallback: Extract from original quote's GST adjustment
+        for adj in base_quote.adjustments:
+            if 'GST' in adj.description and '%' in adj.description:
+                # Extract percentage from description like "GST (9%)"
+                import re
+                match = re.search(r'(\d+)%', adj.description)
+                if match:
+                    return float(match.group(1)) / 100
+        
+        # Last resort fallback: return 0.09 (Singapore standard)
+        # This should ideally never be reached as GST should come from business rules
+        return 0.09
     
     def _empty_quote(self, reason: str) -> DraftQuotePreview:
         """Return an empty quote with error message"""

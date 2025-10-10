@@ -13,6 +13,7 @@ import AdminApproved from './pages/admin/Approved'
 import AdminDocuments from './pages/admin/Documents'
 import AdminKnowledgeBase from './pages/admin/KnowledgeBase'
 import AdminDecisionTrees from './pages/admin/DecisionTrees'
+import AdminBusinessRules from './pages/admin/BusinessRules'
 
 function PrivateRoute({ children }) {
   const { token } = useAuth()
@@ -55,6 +56,7 @@ function App() {
             <Route path="/admin/documents" element={<AdminRoute><AdminDocuments /></AdminRoute>} />
             <Route path="/admin/knowledge-base" element={<AdminRoute><AdminKnowledgeBase /></AdminRoute>} />
             <Route path="/admin/decision-trees" element={<AdminRoute><AdminDecisionTrees /></AdminRoute>} />
+            <Route path="/admin/business-rules" element={<AdminRoute><AdminBusinessRules /></AdminRoute>} />
             
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

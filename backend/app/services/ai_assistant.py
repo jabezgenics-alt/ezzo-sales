@@ -526,72 +526,158 @@ Remember: If customer explicitly asks for a quote and you have the information, 
         
         collected_data = enquiry.collected_data or {}
         
-        # Get the next unanswered question
-        next_q = tree_engine.get_next_question(tree, collected_data)
-        
         # Check if the tree has asked any questions yet (has assistant messages)
         assistant_messages = [msg for msg in enquiry.messages if msg.role == "assistant"]
         tree_has_asked_question = len(assistant_messages) > 0
         
-        # If user provided a message AND tree has asked a question, process the answer
-        if user_message and next_q and tree_has_asked_question:
-            # First try to parse the answer based on question type
-            parsed_answer = tree_engine.parse_answer(
-                user_message, 
-                next_q.type, 
-                next_q.choices
-            )
+        # If tree just assigned and no questions asked yet, extract context from conversation
+        if not tree_has_asked_question and not collected_data.get('_context_extracted'):
+            print("Extracting conversation context for decision tree...")
+            context_data = self._extract_conversation_context(enquiry, tree)
             
-            print(f"Parsed answer for {next_q.key}: {parsed_answer} (type: {type(parsed_answer)})")
-            
-            # Check if parsing succeeded (note: False is a valid answer for boolean!)
-            if parsed_answer is not None or (next_q.type == 'boolean' and isinstance(parsed_answer, bool)):
-                # Store the answer
-                collected_data[next_q.key] = parsed_answer
+            if context_data:
+                print(f"Extracted context: {context_data}")
+                # Store extracted context with metadata
+                for q_id, data in context_data.items():
+                    collected_data[q_id] = data
+                
+                collected_data['_context_extracted'] = True
                 enquiry.collected_data = collected_data
                 
-                # Mark as modified for SQLAlchemy
                 from sqlalchemy.orm.attributes import flag_modified
                 flag_modified(enquiry, "collected_data")
-                
                 db.commit()
-                print(f"Stored answer: {next_q.key} = {parsed_answer}")
-                print(f"Updated collected_data: {enquiry.collected_data}")
+        
+        # Get the next unanswered question
+        next_q = tree_engine.get_next_question(tree, collected_data)
+        
+        # If user provided a message AND tree has asked a question, process the answer
+        if user_message and next_q and tree_has_asked_question:
+            # Check if this was a context confirmation (from_context flag present)
+            is_context_confirmation = (
+                next_q.key in collected_data and 
+                isinstance(collected_data[next_q.key], dict) and 
+                collected_data[next_q.key].get('from_context') and
+                not collected_data[next_q.key].get('confirmed')
+            )
+            
+            if is_context_confirmation:
+                # User is responding to context confirmation
+                # Check if they're confirming or correcting
+                confirmation_intent = self._check_user_intent(user_message)
                 
-                # Get next question
-                next_q = tree_engine.get_next_question(tree, collected_data)
-            else:
-                # Parsing failed - check if user wants to skip or proceed anyway
-                user_intent = self._check_user_intent(user_message)
-                
-                if user_intent == "skip" or user_intent == "proceed_anyway":
-                    # User wants to skip this question - mark as empty string for optional questions
-                    if not next_q.required:
-                        collected_data[next_q.key] = ""
-                        enquiry.collected_data = collected_data
+                if 'yes' in user_message.lower() or 'correct' in user_message.lower() or 'yep' in user_message.lower():
+                    # User confirmed context value
+                    value = collected_data[next_q.key]['value']
+                    collected_data[next_q.key] = value  # Store the actual value, remove metadata
+                    
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(enquiry, "collected_data")
+                    db.commit()
+                    
+                    print(f"Context confirmed for {next_q.key}: {value}")
+                    
+                    # Get next question
+                    next_q = tree_engine.get_next_question(tree, collected_data)
+                else:
+                    # User is providing a different answer (correction)
+                    parsed_answer = tree_engine.parse_answer(
+                        user_message, 
+                        next_q.type, 
+                        next_q.choices
+                    )
+                    
+                    if parsed_answer is not None or (next_q.type == 'boolean' and isinstance(parsed_answer, bool)):
+                        collected_data[next_q.key] = parsed_answer
                         
                         from sqlalchemy.orm.attributes import flag_modified
                         flag_modified(enquiry, "collected_data")
-                        
                         db.commit()
+                        
+                        print(f"Context corrected for {next_q.key}: {parsed_answer}")
+                        
+                        # Get next question
                         next_q = tree_engine.get_next_question(tree, collected_data)
                     else:
-                        # Required question - ask AI to respond naturally
                         yield {
                             'type': 'message',
-                            'content': f"I need this information to provide an accurate quote: {next_q.question}"
+                            'content': f"I didn't quite understand that. {next_q.question}"
                         }
                         return
+            else:
+                # Normal answer processing
+                # First try to parse the answer based on question type
+                parsed_answer = tree_engine.parse_answer(
+                    user_message, 
+                    next_q.type, 
+                    next_q.choices
+                )
+                
+                print(f"Parsed answer for {next_q.key}: {parsed_answer} (type: {type(parsed_answer)})")
+                
+                # Check if parsing succeeded (note: False is a valid answer for boolean!)
+                if parsed_answer is not None or (next_q.type == 'boolean' and isinstance(parsed_answer, bool)):
+                    # Store the answer
+                    collected_data[next_q.key] = parsed_answer
+                    enquiry.collected_data = collected_data
+                    
+                    # Mark as modified for SQLAlchemy
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(enquiry, "collected_data")
+                    
+                    db.commit()
+                    print(f"Stored answer: {next_q.key} = {parsed_answer}")
+                    print(f"Updated collected_data: {enquiry.collected_data}")
+                    
+                    # Get next question
+                    next_q = tree_engine.get_next_question(tree, collected_data)
                 else:
-                    # Failed to parse and not trying to skip - ask for clarification
-                    yield {
-                        'type': 'message',
-                        'content': f"I didn't quite understand that. {next_q.question}"
-                    }
-                    return
+                    # Parsing failed - check if user wants to skip or proceed anyway
+                    user_intent = self._check_user_intent(user_message)
+                    
+                    if user_intent == "skip" or user_intent == "proceed_anyway":
+                        # User wants to skip this question - mark as empty string for optional questions
+                        if not next_q.required:
+                            collected_data[next_q.key] = ""
+                            enquiry.collected_data = collected_data
+                            
+                            from sqlalchemy.orm.attributes import flag_modified
+                            flag_modified(enquiry, "collected_data")
+                            
+                            db.commit()
+                            next_q = tree_engine.get_next_question(tree, collected_data)
+                        else:
+                            # Required question - ask AI to respond naturally
+                            yield {
+                                'type': 'message',
+                                'content': f"I need this information to provide an accurate quote: {next_q.question}"
+                            }
+                            return
+                    else:
+                        # Failed to parse and not trying to skip - ask for clarification
+                        yield {
+                            'type': 'message',
+                            'content': f"I didn't quite understand that. {next_q.question}"
+                        }
+                        return
         
         # If no more questions, prepare draft
         if not next_q:
+            # Apply business rules before generating draft
+            from app.services.rules_engine import rules_engine
+            
+            service_type = tree.service_name if tree else None
+            rules_result = rules_engine.validate_and_apply_rules(db, service_type, collected_data)
+            
+            # Store rules results in collected_data for quote engine to use
+            if rules_result and (rules_result.get("requirements") or rules_result.get("conditions")):
+                collected_data["auto_requirements"] = rules_result.get("requirements", [])
+                collected_data["auto_conditions"] = rules_result.get("conditions", [])
+                enquiry.collected_data = collected_data
+                
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(enquiry, "collected_data")
+            
             enquiry.status = EnquiryStatus.DRAFT_READY
             db.commit()
             
@@ -637,9 +723,43 @@ Remember: If customer explicitly asks for a quote and you have the information, 
             return
         
         # Ask the next question
-        question_text = next_q.question
-        if next_q.choices:
-            question_text += f"\n\nOptions: {', '.join(next_q.choices)}"
+        # Check if this question has a context value that needs confirmation
+        has_context_value = (
+            next_q.key in collected_data and 
+            isinstance(collected_data[next_q.key], dict) and 
+            collected_data[next_q.key].get('from_context')
+        )
+        
+        if has_context_value:
+            # Ask for confirmation of context-extracted value
+            context_data = collected_data[next_q.key]
+            context_value = context_data.get('value')
+            context_source = context_data.get('source', '')
+            
+            question_text = self._confirm_context_value(
+                next_q.question,
+                context_value,
+                context_source
+            )
+            
+            print(f"Asking context confirmation for {next_q.key}: {context_value}")
+        else:
+            # Rephrase question naturally with AI
+            # Get recent conversation context for better rephrasing
+            recent_context = ""
+            if len(enquiry.messages) > 0:
+                recent_msgs = enquiry.messages[-2:]  # Last 2 messages
+                recent_context = " ".join([msg.content[:50] for msg in recent_msgs])
+            
+            question_text = self._rephrase_question_naturally(
+                next_q.question,
+                next_q.type,
+                next_q.choices,
+                tree.display_name,
+                recent_context
+            )
+            
+            print(f"Rephrased question for {next_q.key}: {question_text[:100]}...")
         
         # Save assistant message
         assistant_message = EnquiryMessage(
@@ -717,6 +837,23 @@ Remember: If customer explicitly asks for a quote and you have the information, 
         
         # Check if tree is complete
         if tree_engine.is_complete(tree, enquiry.collected_data or {}):
+            # Apply business rules before generating draft
+            from app.services.rules_engine import rules_engine
+            
+            service_type = tree.service_name if tree else None
+            rules_result = rules_engine.validate_and_apply_rules(db, service_type, enquiry.collected_data or {})
+            
+            # Store rules results in collected_data for quote engine to use
+            if rules_result and (rules_result.get("requirements") or rules_result.get("conditions")):
+                if not enquiry.collected_data:
+                    enquiry.collected_data = {}
+                enquiry.collected_data["auto_requirements"] = rules_result.get("requirements", [])
+                enquiry.collected_data["auto_conditions"] = rules_result.get("conditions", [])
+                
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(enquiry, "collected_data")
+                db.commit()
+            
             # All questions answered, ready for draft
             # Generate a human-readable summary
             summary = self._generate_tree_summary(tree, enquiry.collected_data or {})
@@ -997,6 +1134,209 @@ Examples:
         except Exception as e:
             print(f"Error generating tree summary: {str(e)}")
             return f"All information collected for {tree.display_name}."
+    
+    def _rephrase_question_naturally(
+        self,
+        question: str,
+        question_type: str,
+        choices: Optional[List[str]] = None,
+        service_name: str = "",
+        conversation_context: str = ""
+    ) -> str:
+        """Rephrase a decision tree question naturally using AI"""
+        try:
+            # Build context for AI
+            context_parts = []
+            if service_name:
+                context_parts.append(f"Service: {service_name}")
+            if conversation_context:
+                context_parts.append(f"Recent context: {conversation_context}")
+            
+            context_str = " | ".join(context_parts) if context_parts else "Starting conversation"
+            
+            # Build choices text
+            choices_text = ""
+            if choices and question_type == "choice":
+                choices_text = f"\nAvailable options: {', '.join(choices)}"
+            elif question_type == "boolean":
+                choices_text = "\nExpecting: Yes/No answer"
+            elif question_type == "number":
+                choices_text = "\nExpecting: Numeric value"
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are a friendly, professional sales assistant for Ezzo Sales.
+
+Rephrase the given question to sound natural, warm, and conversational while maintaining professionalism.
+
+Guidelines:
+- Be friendly but professional
+- Use transitional phrases like "Great!", "Perfect", "Wonderful"
+- If options are provided, naturally mention them
+- Keep it concise (1-2 sentences max)
+- Sound like a helpful salesperson, not a form
+- Don't be overly formal or robotic
+
+Examples:
+- "What is the total ladder height (in meters)?" → "Great! Could you let me know the total height of the ladder you need?"
+- "What material do you prefer for the ladder? Options: SS304, HDG, Aluminum" → "Perfect. What material would work best for you? We offer Stainless Steel (SS304), Galvanized Mild Steel (HDG), and Aluminum."
+- "Do you require shop drawings?" → "Would you like us to provide shop drawings for review and approval?"
+
+Return ONLY the rephrased question, nothing else."""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Context: {context_str}\n\nRephrase this question naturally:\n{question}{choices_text}"
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=150
+            )
+            
+            rephrased = response.choices[0].message.content.strip()
+            
+            # If choices exist and weren't mentioned, add them at the end
+            if choices and question_type == "choice" and not any(choice.lower() in rephrased.lower() for choice in choices):
+                rephrased += f"\n\nOptions: {', '.join(choices)}"
+            
+            return rephrased
+            
+        except Exception as e:
+            print(f"Error rephrasing question: {str(e)}")
+            # Fallback to original question
+            if choices:
+                return f"{question}\n\nOptions: {', '.join(choices)}"
+            return question
+    
+    def _extract_conversation_context(
+        self,
+        enquiry: Enquiry,
+        tree: DecisionTree
+    ) -> Dict[str, Any]:
+        """Extract pre-filled data from conversation history using AI"""
+        try:
+            # Build conversation text
+            conversation_text = f"Initial request: {enquiry.initial_message}\n\n"
+            for msg in enquiry.messages:
+                conversation_text += f"{msg.role}: {msg.content}\n"
+            
+            # Get decision tree questions for reference
+            questions = tree.tree_config.get('questions', [])
+            question_list = []
+            for q in questions:
+                q_dict = {
+                    'id': q.get('id'),
+                    'question': q.get('question'),
+                    'type': q.get('type')
+                }
+                question_list.append(q_dict)
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"""You are extracting information from a conversation to pre-fill a quotation form.
+
+Decision Tree Questions:
+{json.dumps(question_list, indent=2)}
+
+Analyze the conversation and extract answers for any questions that were already discussed.
+
+Return JSON with:
+- For each question ID where information is available: {{ "question_id": {{"value": "extracted_answer", "confidence": 0-100, "source": "quote from conversation"}} }}
+- Only include questions where the answer is CLEARLY stated
+- Use exact question IDs from the list above
+- For numeric answers, extract the number
+- For choice answers, match to the closest option
+- For text answers, extract the relevant information
+
+Example:
+If conversation mentions "5 meter ladder" and there's a "ladder_height" question, return:
+{{ "ladder_height": {{"value": 5, "confidence": 95, "source": "5 meter ladder"}} }}
+
+Return empty object {{}} if no clear information found."""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Conversation:\n{conversation_text}\n\nExtract information for the decision tree questions."
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=500
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            
+            # Convert to simple dict of question_id: value
+            extracted_data = {}
+            for q_id, data in result.items():
+                if isinstance(data, dict) and 'value' in data:
+                    extracted_data[q_id] = {
+                        'value': data['value'],
+                        'from_context': True,
+                        'confidence': data.get('confidence', 0),
+                        'source': data.get('source', '')
+                    }
+            
+            return extracted_data
+            
+        except Exception as e:
+            print(f"Error extracting conversation context: {str(e)}")
+            return {}
+    
+    def _confirm_context_value(
+        self,
+        question: str,
+        context_value: Any,
+        context_source: str = ""
+    ) -> str:
+        """Generate a natural confirmation message for context-extracted values"""
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are a friendly sales assistant confirming information with a customer.
+
+Generate a natural confirmation question that:
+1. Mentions what you understood from the conversation
+2. Asks if that's correct
+3. Sounds warm and professional
+4. Gives them a chance to correct if needed
+
+Examples:
+- Question: "What is the ladder height?" | Value: 5 | Source: "5 meter ladder"
+  → "I see you mentioned a 5 meter ladder earlier - is that the total height you need?"
+
+- Question: "What material?" | Value: "Aluminum" | Source: "aluminum ladder"
+  → "Just to confirm, you'd like this in Aluminum, correct?"
+
+- Question: "Location" | Value: "Singapore" | Source: "site in Singapore"
+  → "And this will be installed in Singapore, right?"
+
+Return ONLY the confirmation question."""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Question: {question}\nValue from conversation: {context_value}\nSource: {context_source}\n\nGenerate confirmation question."
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=100
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            print(f"Error generating confirmation: {str(e)}")
+            # Fallback
+            return f"I understood from our conversation that the answer is: {context_value}. Is that correct?"
     
     def analyze_image(self, image_path: str, context: str = "") -> str:
         """Analyze an image using GPT-4o Vision with a sales-lead focus.

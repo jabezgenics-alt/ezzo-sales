@@ -8,7 +8,7 @@ from app.config import settings
 from app.database import init_db, get_db
 from app.models import User, UserRole
 from app.auth import create_user
-from app.routers import auth, documents, enquiries, admin, knowledge, decision_trees
+from app.routers import auth, documents, enquiries, admin, knowledge, decision_trees, business_rules
 
 # Suppress ChromaDB telemetry warnings
 warnings.filterwarnings('ignore', message='.*telemetry.*')
@@ -61,6 +61,7 @@ app.include_router(enquiries.router)
 app.include_router(admin.router)
 app.include_router(knowledge.router)
 app.include_router(decision_trees.router)
+app.include_router(business_rules.router)
 
 # Serve uploaded files under /api/uploads so the frontend can access them via the proxy
 app.mount("/api/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")

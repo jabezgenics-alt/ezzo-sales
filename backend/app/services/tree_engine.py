@@ -97,6 +97,30 @@ Be flexible with spelling, punctuation, and partial matches. Match based on INTE
         
         return None
     
+    def _get_actual_value(self, data: Any) -> Any:
+        """Extract actual value from context metadata or return as-is"""
+        if isinstance(data, dict) and 'value' in data:
+            # This is context data with metadata
+            return data['value']
+        return data
+    
+    def _is_question_answered(self, collected_data: Dict[str, Any], q_id: str) -> bool:
+        """Check if a question has been answered (handles context data)"""
+        if q_id not in collected_data:
+            return False
+        
+        value = collected_data[q_id]
+        
+        # If it's context data with from_context flag but not confirmed, it's NOT answered
+        if isinstance(value, dict):
+            if value.get('from_context') and not value.get('confirmed'):
+                return False  # Needs confirmation
+            elif 'value' in value:
+                return True  # Has value
+        
+        # Regular value
+        return value is not None
+    
     def _find_next_question_id(
         self,
         questions: List[Dict],
@@ -118,7 +142,7 @@ Be flexible with spelling, punctuation, and partial matches. Match based on INTE
         
         # Find first unanswered question in the path
         for q_id in question_path:
-            if q_id not in collected_data or collected_data[q_id] is None:
+            if not self._is_question_answered(collected_data, q_id):
                 return q_id
         
         return None
@@ -164,6 +188,14 @@ Be flexible with spelling, punctuation, and partial matches. Match based on INTE
             
             # Check if this question has been answered
             answer = collected_data.get(current_id)
+            
+            # Handle context data - extract actual value
+            if isinstance(answer, dict):
+                if answer.get('from_context') and not answer.get('confirmed'):
+                    # Context value not yet confirmed, stop here
+                    break
+                answer = self._get_actual_value(answer)
+            
             if answer is None:
                 # Not answered yet, stop here
                 break
@@ -207,7 +239,7 @@ Be flexible with spelling, punctuation, and partial matches. Match based on INTE
         
         # Check if all questions in the path are answered
         for q_id in question_path:
-            if q_id not in collected_data or collected_data[q_id] is None:
+            if not self._is_question_answered(collected_data, q_id):
                 return False
         
         # Also check if there's a next question - if yes, we're not complete
