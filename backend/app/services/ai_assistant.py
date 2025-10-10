@@ -116,8 +116,15 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
             if user_message:
                 message_to_match = message_to_match + " " + user_message
             
+            # Build conversation history for context
+            conv_history = ""
+            if enquiry.messages:
+                recent_msgs = enquiry.messages[-4:]  # Last 4 messages for context
+                for msg in recent_msgs:
+                    conv_history += f"{msg.role}: {msg.content}\n"
+            
             # Only match tree if user explicitly wants a quote
-            if self._user_wants_quote(message_to_match):
+            if self._user_wants_quote(user_message or enquiry.initial_message, conv_history):
                 tree = tree_engine.match_service(db, message_to_match)
                 if tree:
                     # Assign the tree to the enquiry
@@ -278,8 +285,15 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
             if user_message:
                 message_to_match = message_to_match + " " + user_message
             
+            # Build conversation history for context
+            conv_history = ""
+            if enquiry.messages:
+                recent_msgs = enquiry.messages[-4:]  # Last 4 messages for context
+                for msg in recent_msgs:
+                    conv_history += f"{msg.role}: {msg.content}\n"
+            
             # Only match tree if user explicitly wants a quote
-            if self._user_wants_quote(message_to_match):
+            if self._user_wants_quote(user_message or enquiry.initial_message, conv_history):
                 tree = tree_engine.match_service(db, message_to_match)
                 if tree:
                     # Assign the tree to the enquiry
@@ -1040,9 +1054,14 @@ Only include fields that were clearly mentioned in the conversation."""
             traceback.print_exc()
             return {}
     
-    def _user_wants_quote(self, message: str) -> bool:
+    def _user_wants_quote(self, message: str, conversation_history: str = "") -> bool:
         """Check if user explicitly wants a quote using AI"""
         try:
+            # Build the full context
+            full_context = message
+            if conversation_history:
+                full_context = f"Recent conversation:\n{conversation_history}\n\nLatest user message: {message}"
+            
             response = self.client.chat.completions.create(
                 model=settings.OPENAI_MODEL,
                 messages=[
@@ -1052,12 +1071,12 @@ Only include fields that were clearly mentioned in the conversation."""
 
 Return JSON: {"wants_quote": true/false}
 
-The user wants a quote (return true) ONLY if they:
+The user wants a quote (return true) if they:
 - Explicitly say "I need a quote" or "I want a quote"
-- Say "give me a quote", "generate quote", "create a quote"
+- Say "give me a quote", "generate quote", "create a quote", "prepare a quote"
 - Say "I'd like a quote" or "id like a quote"
-- Say "yes", "sure", "confirm", "proceed" AFTER AI has offered to create a quote
-- Say "go ahead" or "let's do it" in response to a quote offer
+- Say "yes", "yeah", "yea", "yep", "sure", "ok", "okay", "confirm", "proceed" when AI has asked "Would you like me to create/generate/prepare a quote"
+- Say "go ahead", "let's do it", "do it", "alright" in response to a quote offer
 - Want to get a formal quotation and use the word "quote"
 
 The user does NOT want a quote (return false) if they:
@@ -1070,17 +1089,27 @@ The user does NOT want a quote (return false) if they:
 - Say "tell me about X service"
 - Ask questions without explicitly requesting a quote
 - Just greet or say hello
+- Are in the middle of providing details but haven't confirmed they want the quote yet
 
 CRITICAL: "how much", "price", "cost" questions should return FALSE - user wants discussion first, not immediate quote process!
+
+IMPORTANT: If the conversation shows the AI has asked "Would you like me to create/generate/prepare a quote?" and user responds with ANY affirmative (yes, yeah, yea, ok, okay, sure, alright, proceed, go ahead), return TRUE!
 
 Examples:
 - "I need a quote for cat ladder installation" → {"wants_quote": true}
 - "give me a quote" → {"wants_quote": true}
+- "prepare a quote" → {"wants_quote": true}
 - "I'd like a quote" → {"wants_quote": true}
-- "yes" (after AI offered quote) → {"wants_quote": true}
+- "yes" (after AI asked "would you like me to create a quote") → {"wants_quote": true}
+- "yeah" (after AI offered quote) → {"wants_quote": true}
+- "yea" (after AI offered quote) → {"wants_quote": true}
+- "ok" (after AI asked "would you like me to generate a quote") → {"wants_quote": true}
+- "okay" (after AI offered quote) → {"wants_quote": true}
+- "sure" (after AI offered quote) → {"wants_quote": true}
+- "alright" (after AI offered quote) → {"wants_quote": true}
 - "confirm" (after AI offered quote) → {"wants_quote": true}
 - "proceed" (after AI offered quote) → {"wants_quote": true}
-- "sure" (after AI offered quote) → {"wants_quote": true}
+- "go ahead" (after AI offered quote) → {"wants_quote": true}
 - "how much for 2m high cat ladder" → {"wants_quote": false}
 - "how much for cat ladder" → {"wants_quote": false}
 - "price for ss316 ladder" → {"wants_quote": false}
@@ -1089,11 +1118,12 @@ Examples:
 - "What services do you offer?" → {"wants_quote": false}
 - "Tell me about parquet flooring" → {"wants_quote": false}
 - "how much" → {"wants_quote": false}
-- "Hello" → {"wants_quote": false}"""
+- "Hello" → {"wants_quote": false}
+- "aluminum" (just answering a question) → {"wants_quote": false}"""
                     },
                     {
                         "role": "user",
-                        "content": message
+                        "content": full_context
                     }
                 ],
                 temperature=0,
