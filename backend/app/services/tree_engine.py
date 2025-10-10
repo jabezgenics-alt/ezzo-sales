@@ -111,12 +111,13 @@ Be flexible with spelling, punctuation, and partial matches. Match based on INTE
         
         value = collected_data[q_id]
         
-        # If it's context data with from_context flag but not confirmed, it's NOT answered
+        # If it's context data extracted from conversation, treat it as answered once confirmed
         if isinstance(value, dict):
-            if value.get('from_context') and not value.get('confirmed'):
-                return False  # Needs confirmation
-            elif 'value' in value:
-                return True  # Has value
+            if value.get('from_context'):
+                # Consider question answered only when the context value has been confirmed by the user
+                return bool(value.get('confirmed'))
+            if 'value' in value:
+                return True  # Has stored value without metadata
         
         # Regular value
         return value is not None

@@ -20,43 +20,53 @@ class AIAssistant:
 Your role:
 1. Help customers with general questions about services and products using the knowledge base
 2. Provide helpful information about Ezzo Sales offerings
-3. Only start quote collection when the customer explicitly asks for pricing/quotes
-4. Always be polite, professional, and helpful
+3. Discuss services conversationally when customers ask "how much" questions
+4. Offer to create formal quotes when customers show genuine interest
+5. Always be polite, professional, and helpful
 
-IMPORTANT - Follow this order:
-1. FIRST - Answer general questions using the knowledge base information
-2. Provide helpful information about services, products, and capabilities
-3. ONLY when customer explicitly asks for a quote/price, then start collecting quote information
-4. Use the knowledge base to provide accurate information
+CRITICAL - CONVERSATIONAL FLOW:
+When customers ask "how much for X" or "price for X":
+- DO NOT mention specific prices or numbers
+- DO NOT immediately start the formal quote process
+- INSTEAD: Discuss the service features, options, materials, and considerations
+- Explain what factors affect pricing (e.g., height, material, installation complexity)
+- Keep the conversation natural and sales-oriented
+- After discussing and if customer shows interest, offer: "Would you like me to create a detailed quote for this?"
+
+NEVER mention specific prices until you're in the formal quote process!
+
+WHEN TO OFFER A FORMAL QUOTE:
+After discussing the service conversationally, offer to create a quote if:
+- Customer asks detailed questions about the service
+- Customer mentions specific requirements (e.g., "I need a 2m ladder")
+- Conversation shows genuine interest (not just browsing)
+- You've explained the service and options
+
+Say something like:
+- "Would you like me to create a detailed quote for this?"
+- "I can prepare a formal quotation with exact pricing if you'd like?"
+- "Shall I generate a quote with all the details?"
+
+WHEN TO START FORMAL QUOTE PROCESS:
+Only start the structured quote collection when:
+- Customer explicitly says "I need a quote" or "give me a quote"
+- Customer confirms "yes" after you offer to create a quote
+- Customer says "proceed", "confirm", "sure" in response to your quote offer
 
 CRITICAL GST INFORMATION:
 - Singapore GST rate is 9% (NOT 8%)
 - All prices are quoted before GST
 - GST is calculated as 9% of the quoted price
-- When providing pricing information, always mention "before GST" and that GST is 9%
-
-IMPORTANT SERVICE CLARIFICATION:
-- When customers ask about pricing for services that could have multiple types, ALWAYS clarify what specific service they need first
-- Don't assume the service type - ask for clarification before providing pricing
-- Use knowledge base information to provide accurate pricing for the correct service
-- Even if customer asks "how much", first clarify the service type before providing pricing
-- This applies to any service that has multiple variants (installation, repair, maintenance, etc.)
+- Only mention GST when providing actual pricing in formal quotes
 
 Guidelines:
 - Be conversational and helpful
-- Use knowledge base information to answer questions accurately
-- Don't push for quotes unless customer asks
-- If customer asks for a quote, then ask clarifying questions one at a time
-- Never make up prices - always use information from the knowledge base
-- Focus on being helpful and informative first
+- Use knowledge base to discuss service features and options (NOT prices)
+- Build rapport before jumping into formal quoting
+- If customer asks "how much", discuss the service first, then offer to create a quote
+- Never make up prices - only show prices in formal quotes after gathering all details
+- Focus on being consultative and informative
 - ALWAYS use 9% GST rate for Singapore (never 8%)
-- ALWAYS clarify service type before providing pricing
-
-When customer explicitly wants a quote, ask for:
-1. What specific service/product they need
-2. Exact area/quantity needed
-3. Location (affects delivery and pricing)
-4. Any special requirements
 
 CRITICAL - WORKFLOW FOR GENERATING QUOTES:
 1. Collect required information: service type, quantity/area, and location
@@ -83,7 +93,7 @@ WHEN NOT TO CALL draft_ready:
 - When customer is just asking questions about the service
 - When information is incomplete
 
-Remember: If customer explicitly asks for a quote and you have the information, CALL draft_ready immediately. Don't make them confirm twice."""
+Remember: Build rapport with conversation first, offer quotes when appropriate, then collect details for formal pricing."""
     
     def process_enquiry(
         self,
@@ -302,7 +312,7 @@ Remember: If customer explicitly asks for a quote and you have the information, 
         
         # Add KB context to system message
         if kb_context:
-            kb_text = "\n\nRelevant information from knowledge base:\n" + kb_context
+            kb_text = "\n\nRelevant information from knowledge base:\n" + kb_text
             messages[0]["content"] += kb_text
         
         # Check if this is a general question or quote request
@@ -489,6 +499,30 @@ Remember: If customer explicitly asks for a quote and you have the information, 
             db.add(assistant_message)
             db.commit()
             
+            # Check if AI should offer to create a quote
+            if not enquiry.service_tree_id and self._should_offer_quote(enquiry, full_content):
+                # Append quote offer to the response
+                quote_offer = "\n\nWould you like me to create a detailed quote for this?"
+                
+                # Save the quote offer as part of the message
+                assistant_message.content = full_content + quote_offer
+                db.commit()
+                
+                # Yield the quote offer
+                yield {
+                    'type': 'content',
+                    'content': quote_offer
+                }
+                
+                # Mark that we've offered a quote
+                collected_data = enquiry.collected_data or {}
+                collected_data['_quote_offered'] = True
+                enquiry.collected_data = collected_data
+                
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(enquiry, "collected_data")
+                db.commit()
+            
             # Check if draft is ready
             if self._check_if_ready(enquiry):
                 enquiry.status = EnquiryStatus.DRAFT_READY
@@ -526,11 +560,12 @@ Remember: If customer explicitly asks for a quote and you have the information, 
         
         collected_data = enquiry.collected_data or {}
         
-        # Check if the tree has asked any questions yet (has assistant messages)
-        assistant_messages = [msg for msg in enquiry.messages if msg.role == "assistant"]
-        tree_has_asked_question = len(assistant_messages) > 0
+        # Check if the tree has asked any questions yet
+        # We look for actual answered questions (excluding context metadata)
+        actual_answers = {k: v for k, v in collected_data.items() if not k.startswith('_')}
+        tree_has_asked_question = len(actual_answers) > 0
         
-        # If tree just assigned and no questions asked yet, extract context from conversation
+        # If tree just assigned and no questions answered yet, extract context from conversation
         if not tree_has_asked_question and not collected_data.get('_context_extracted'):
             print("Extracting conversation context for decision tree...")
             context_data = self._extract_conversation_context(enquiry, tree)
@@ -568,14 +603,15 @@ Remember: If customer explicitly asks for a quote and you have the information, 
                 
                 if 'yes' in user_message.lower() or 'correct' in user_message.lower() or 'yep' in user_message.lower():
                     # User confirmed context value
-                    value = collected_data[next_q.key]['value']
-                    collected_data[next_q.key] = value  # Store the actual value, remove metadata
+                    context_entry = collected_data[next_q.key]
+                    context_entry['confirmed'] = True
+                    collected_data[next_q.key] = context_entry
                     
                     from sqlalchemy.orm.attributes import flag_modified
                     flag_modified(enquiry, "collected_data")
                     db.commit()
                     
-                    print(f"Context confirmed for {next_q.key}: {value}")
+                    print(f"Context confirmed for {next_q.key}: {context_entry.get('value')}")
                     
                     # Get next question
                     next_q = tree_engine.get_next_question(tree, collected_data)
@@ -1012,38 +1048,47 @@ Only include fields that were clearly mentioned in the conversation."""
                 messages=[
                     {
                         "role": "system",
-                        "content": """Determine if the user explicitly wants a quote or pricing information.
+                        "content": """Determine if the user explicitly wants to START THE FORMAL QUOTE PROCESS.
 
 Return JSON: {"wants_quote": true/false}
 
-The user wants a quote if they:
-- Explicitly ask for a "quote" or "quotation"
-- Say "I need a quote for..." with specific service details
-- Say "I'd like a quote" or "I like a quote" or "id like a quote"
-- Say "confirm" after receiving pricing information
-- Say "proceed" or "go ahead" after receiving pricing information
-- Clearly specify the service type AND request pricing
-- Want to get a formal quotation
-- Ask to "finalize" or "complete" the quote
+The user wants a quote (return true) ONLY if they:
+- Explicitly say "I need a quote" or "I want a quote"
+- Say "give me a quote", "generate quote", "create a quote"
+- Say "I'd like a quote" or "id like a quote"
+- Say "yes", "sure", "confirm", "proceed" AFTER AI has offered to create a quote
+- Say "go ahead" or "let's do it" in response to a quote offer
+- Want to get a formal quotation and use the word "quote"
 
-The user does NOT want a quote if they:
-- Are just asking general questions
-- Want information about services
-- Are browsing or learning
+The user does NOT want a quote (return false) if they:
+- Ask "how much for X" or "how much does X cost" (they want discussion first)
+- Ask "price for X" or "cost of X" (they want discussion first)
+- Ask "what's the pricing for X" (they want discussion first)
+- Are just asking general questions about services
+- Want information or are browsing
 - Ask "what services do you offer?"
-- Ask general questions without mentioning pricing
-- Ask "how much" without clear service specification
-- Mention multiple possible service types that need clarification
+- Say "tell me about X service"
+- Ask questions without explicitly requesting a quote
+- Just greet or say hello
+
+CRITICAL: "how much", "price", "cost" questions should return FALSE - user wants discussion first, not immediate quote process!
 
 Examples:
 - "I need a quote for cat ladder installation" → {"wants_quote": true}
+- "give me a quote" → {"wants_quote": true}
+- "I'd like a quote" → {"wants_quote": true}
+- "yes" (after AI offered quote) → {"wants_quote": true}
+- "confirm" (after AI offered quote) → {"wants_quote": true}
+- "proceed" (after AI offered quote) → {"wants_quote": true}
+- "sure" (after AI offered quote) → {"wants_quote": true}
+- "how much for 2m high cat ladder" → {"wants_quote": false}
+- "how much for cat ladder" → {"wants_quote": false}
+- "price for ss316 ladder" → {"wants_quote": false}
+- "cost of installation" → {"wants_quote": false}
+- "what's the pricing" → {"wants_quote": false}
 - "What services do you offer?" → {"wants_quote": false}
 - "Tell me about parquet flooring" → {"wants_quote": false}
-- "How much for 3 bedroom parquet" → {"wants_quote": false} (needs clarification)
-- "I need a quote for parquet sanding and varnishing" → {"wants_quote": true}
-- "okay id like a quote" → {"wants_quote": true}
-- "confirm" → {"wants_quote": true}
-- "proceed" → {"wants_quote": true}
+- "how much" → {"wants_quote": false}
 - "Hello" → {"wants_quote": false}"""
                     },
                     {
@@ -1060,6 +1105,78 @@ Examples:
             return result.get('wants_quote', False)
         except Exception as e:
             print(f"Error checking quote intent: {str(e)}")
+            return False
+    
+    def _should_offer_quote(self, enquiry: Enquiry, current_response: str) -> bool:
+        """Determine if AI should offer to create a quote based on conversation context"""
+        try:
+            # Build conversation history
+            messages_text = ""
+            for msg in enquiry.messages:
+                role = "Customer" if msg.role == "customer" else "AI"
+                messages_text += f"{role}: {msg.content}\n"
+            
+            # Add current AI response
+            messages_text += f"AI (current): {current_response}\n"
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Analyze the conversation to determine if the AI should offer to create a formal quote.
+
+Return JSON: {"should_offer": true/false, "reason": "brief explanation"}
+
+Offer a quote if:
+- Customer has asked about pricing/cost ("how much", "price for", "cost of")
+- Customer has mentioned specific requirements or details (e.g., "2m ladder", "ss316 material")
+- Customer is asking detailed questions showing genuine interest
+- Conversation has gone 1-2+ turns discussing a specific service
+- Customer seems ready but hasn't explicitly requested a quote yet
+
+Do NOT offer a quote if:
+- This is the very first message (too early)
+- Customer is just browsing or asking very general questions
+- Customer already explicitly said they want a quote (they'll say it themselves)
+- AI has ALREADY offered a quote in this conversation (don't repeat)
+- Customer is asking about multiple different services (needs focus first)
+
+Check if quote was already offered by looking for phrases like "Would you like me to create" or "Shall I generate" in AI messages.
+
+Examples:
+Customer: "how much for cat ladder" 
+AI: "Cat ladders come in various materials..." (discusses service)
+→ {"should_offer": true, "reason": "Customer asked about pricing, AI has explained the service"}
+
+Customer: "Hello"
+AI: "Hello! How can I help?"
+→ {"should_offer": false, "reason": "Too early, just a greeting"}
+
+Customer: "I need ss316 2m ladder"
+AI: "Great choice! SS316 is corrosion resistant..." (discusses)
+→ {"should_offer": true, "reason": "Customer has specific requirements"}"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Conversation:\n{messages_text}"
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=100
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            should_offer = result.get('should_offer', False)
+            reason = result.get('reason', '')
+            
+            if should_offer:
+                print(f"Should offer quote: {reason}")
+            
+            return should_offer
+        except Exception as e:
+            print(f"Error checking if should offer quote: {str(e)}")
             return False
     
     def _check_user_intent(self, message: str) -> str:
@@ -1279,6 +1396,7 @@ Return empty object {{}} if no clear information found."""
                     extracted_data[q_id] = {
                         'value': data['value'],
                         'from_context': True,
+                        'confirmed': False,
                         'confidence': data.get('confidence', 0),
                         'source': data.get('source', '')
                     }
