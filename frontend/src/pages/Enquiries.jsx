@@ -481,7 +481,7 @@ export default function Enquiries() {
                           onClick={() => setActiveDrawing({ url: message.drawing_url, filename: message.filename })}
                         >
                           <Worker workerUrl={pdfWorkerUrl}>
-                            <div className="h-64 bg-gray-50">
+                            <div style={{ height: '300px', width: '100%' }} className="bg-gray-50">
                               <Viewer
                                 fileUrl={message.drawing_url}
                                 defaultScale={SpecialZoomLevel.PageWidth}
