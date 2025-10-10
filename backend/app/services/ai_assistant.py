@@ -312,7 +312,7 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
         
         # Add KB context to system message
         if kb_context:
-            kb_text = "\n\nRelevant information from knowledge base:\n" + kb_text
+            kb_text = "\n\nRelevant information from knowledge base:\n" + kb_context
             messages[0]["content"] += kb_text
         
         # Check if this is a general question or quote request
