@@ -475,21 +475,19 @@ export default function Enquiries() {
                     
                     {/* Product Drawing Display */}
                     {message.drawing_url && (
-                      <div className="rounded-lg border border-gray-200 mt-2 bg-white overflow-hidden">
-                        <div 
-                          className="cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => setActiveDrawing({ url: message.drawing_url, filename: message.filename })}
-                        >
-                          <Worker workerUrl={pdfWorkerUrl}>
-                            <div style={{ height: '300px', width: '100%' }} className="bg-gray-50">
-                              <Viewer
-                                fileUrl={message.drawing_url}
-                                defaultScale={SpecialZoomLevel.PageWidth}
-                                theme="light"
-                              />
-                            </div>
-                          </Worker>
-                        </div>
+                      <div 
+                        className="cursor-pointer hover:opacity-95 transition-opacity mt-2"
+                        onClick={() => setActiveDrawing({ url: message.drawing_url, filename: message.filename })}
+                      >
+                        <Worker workerUrl={pdfWorkerUrl}>
+                          <div style={{ height: '300px', width: '100%' }} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                            <Viewer
+                              fileUrl={message.drawing_url}
+                              defaultScale={SpecialZoomLevel.PageWidth}
+                              theme="light"
+                            />
+                          </div>
+                        </Worker>
                       </div>
                     )}
       <Dialog.Root open={!!activeDrawing} onOpenChange={(open) => {

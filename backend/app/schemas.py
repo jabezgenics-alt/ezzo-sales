@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from app.models import UserRole, DocumentStatus, EnquiryStatus, QuoteStatus
+from app.models import UserRole, DocumentStatus, EnquiryStatus, QuoteStatus, ProductDocumentType
 
 
 # User Schemas
@@ -58,6 +58,29 @@ class DocumentResponse(BaseModel):
 
 class DocumentSummaryUpdate(BaseModel):
     summary: str
+
+
+# Product Document Schemas
+class ProductDocumentCreate(BaseModel):
+    product_name: str
+    document_id: int
+    document_type: ProductDocumentType
+    display_order: int = 0
+
+
+class ProductDocumentResponse(BaseModel):
+    id: int
+    product_name: str
+    document_type: ProductDocumentType
+    document_id: int
+    document_filename: str
+    display_order: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
 
 
 # Knowledge Chunk Schemas

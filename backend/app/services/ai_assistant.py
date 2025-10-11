@@ -3,7 +3,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 import json
 from app.config import settings
-from app.models import Enquiry, EnquiryMessage, KnowledgeChunk, DecisionTree, EnquiryStatus
+from app.models import Enquiry, EnquiryMessage, KnowledgeChunk, DecisionTree, EnquiryStatus, ProductDocument, Document
 from app.services.vector_store import vector_store
 from app.services.quote_engine import quote_engine
 from app.schemas import AIQuestion, AIResponse
@@ -304,27 +304,63 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
         # Check if user wants to see a drawing (before tree processing)
         # Only check if there's a user message (not on initial enquiry creation)
         if user_message and self._user_wants_drawing(user_message, enquiry):
-            # Show the product drawing
-            drawing_response = "Here's the technical drawing for the cat ladder:"
+            # Detect which product they're asking about
+            product_name = self._detect_product(user_message, enquiry)
             
-            # Save the message
-            drawing_msg = EnquiryMessage(
-                enquiry_id=enquiry.id,
-                role="assistant",
-                content=drawing_response
-            )
-            db.add(drawing_msg)
-            db.commit()
-            
-            # Stream the drawing response
-            yield {
-                'type': 'drawing',
-                'message': drawing_response,
-                'drawing_url': '/api/documents/drawings/cat_ladder',
-                'filename': 'CATLADDER WCAGE.pdf'
-            }
-            yield {'type': 'done'}
-            return
+            if product_name:
+                # Detect document type from user request
+                message_lower = user_message.lower()
+                if 'catalog' in message_lower or 'catalogue' in message_lower:
+                    doc_type = 'catalog'
+                elif 'brochure' in message_lower:
+                    doc_type = 'brochure'
+                elif 'spec' in message_lower or 'specification' in message_lower:
+                    doc_type = 'spec_sheet'
+                else:
+                    doc_type = 'technical_drawing'  # Default
+                
+                # Query database for product document with fallback
+                product_doc = db.query(ProductDocument).join(Document).filter(
+                    ProductDocument.product_name == product_name,
+                    ProductDocument.document_type == doc_type,
+                    ProductDocument.is_active == True
+                ).order_by(ProductDocument.display_order).first()
+                
+                # If not found, try any type for this product
+                if not product_doc:
+                    product_doc = db.query(ProductDocument).join(Document).filter(
+                        ProductDocument.product_name == product_name,
+                        ProductDocument.is_active == True
+                    ).order_by(
+                        # Priority: technical_drawing > catalog > brochure > spec_sheet
+                        ProductDocument.document_type.desc(),
+                        ProductDocument.display_order
+                    ).first()
+                
+                if product_doc:
+                    # Show the product document
+                    product_display = product_name.replace('_', ' ').title()
+                    doc_type_display = product_doc.document_type.replace('_', ' ')
+                    drawing_response = f"Here's the {doc_type_display} for the {product_display}:"
+                    
+                    # Save the message
+                    drawing_msg = EnquiryMessage(
+                        enquiry_id=enquiry.id,
+                        role="assistant",
+                        content=drawing_response
+                    )
+                    db.add(drawing_msg)
+                    db.commit()
+                    
+                    # Stream the drawing response
+                    yield {
+                        'type': 'drawing',
+                        'message': drawing_response,
+                        'drawing_url': f'/api/documents/drawings/{product_name}?document_type={product_doc.document_type}',
+                        'filename': product_doc.document.original_filename
+                    }
+                    yield {'type': 'done'}
+                    return
         
         # If we have a decision tree, use tree-based questioning
         if tree:
@@ -690,27 +726,63 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                 # Normal answer processing
                 # First check if user wants to see a drawing
                 if self._user_wants_drawing(user_message, enquiry):
-                    # Show the product drawing
-                    drawing_response = "Here's the technical drawing for the cat ladder:"
+                    # Detect which product they're asking about
+                    product_name = self._detect_product(user_message, enquiry)
                     
-                    # Save the message
-                    drawing_msg = EnquiryMessage(
-                        enquiry_id=enquiry.id,
-                        role="assistant",
-                        content=drawing_response
-                    )
-                    db.add(drawing_msg)
-                    db.commit()
-                    
-                    # Yield drawing response
-                    yield {
-                        'type': 'drawing',
-                        'message': drawing_response,
-                        'drawing_url': '/api/documents/drawings/cat_ladder',
-                        'filename': 'CATLADDER WCAGE.pdf'
-                    }
-                    yield {'type': 'done'}
-                    return
+                    if product_name:
+                        # Detect document type from user request
+                        message_lower = user_message.lower()
+                        if 'catalog' in message_lower or 'catalogue' in message_lower:
+                            doc_type = 'catalog'
+                        elif 'brochure' in message_lower:
+                            doc_type = 'brochure'
+                        elif 'spec' in message_lower or 'specification' in message_lower:
+                            doc_type = 'spec_sheet'
+                        else:
+                            doc_type = 'technical_drawing'  # Default
+                        
+                        # Query database for product document with fallback
+                        product_doc = db.query(ProductDocument).join(Document).filter(
+                            ProductDocument.product_name == product_name,
+                            ProductDocument.document_type == doc_type,
+                            ProductDocument.is_active == True
+                        ).order_by(ProductDocument.display_order).first()
+                        
+                        # If not found, try any type for this product
+                        if not product_doc:
+                            product_doc = db.query(ProductDocument).join(Document).filter(
+                                ProductDocument.product_name == product_name,
+                                ProductDocument.is_active == True
+                            ).order_by(
+                                # Priority: technical_drawing > catalog > brochure > spec_sheet
+                                ProductDocument.document_type.desc(),
+                                ProductDocument.display_order
+                            ).first()
+                        
+                        if product_doc:
+                            # Show the product document
+                            product_display = product_name.replace('_', ' ').title()
+                            doc_type_display = product_doc.document_type.replace('_', ' ')
+                            drawing_response = f"Here's the {doc_type_display} for the {product_display}:"
+                            
+                            # Save the message
+                            drawing_msg = EnquiryMessage(
+                                enquiry_id=enquiry.id,
+                                role="assistant",
+                                content=drawing_response
+                            )
+                            db.add(drawing_msg)
+                            db.commit()
+                            
+                            # Yield drawing response
+                            yield {
+                                'type': 'drawing',
+                                'message': drawing_response,
+                                'drawing_url': f'/api/documents/drawings/{product_name}?document_type={product_doc.document_type}',
+                                'filename': product_doc.document.original_filename
+                            }
+                            yield {'type': 'done'}
+                            return
                 
                 # Check if user is going sideways (asking a different question)
                 if self._is_sideways_question(user_message, next_q.type, next_q.question):
@@ -1293,6 +1365,90 @@ Examples:
             # Fallback: check for explicit keywords
             drawing_keywords = ['show me', 'can i see', 'what does it look like', 'drawing', 'design', 'picture']
             return any(keyword in message.lower() for keyword in drawing_keywords)
+    
+    def _detect_product(self, message: str, enquiry: Enquiry) -> Optional[str]:
+        """Detect which product the user is asking about"""
+        try:
+            # Build context
+            context = f"Initial request: {enquiry.initial_message}\n"
+            if enquiry.messages:
+                recent_msgs = enquiry.messages[-3:]
+                for msg in recent_msgs:
+                    context += f"{msg.role}: {msg.content}\n"
+            context += f"Current message: {message}"
+            
+            response = self.client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Identify the product being discussed.
+
+Return JSON: {"product": "product_identifier"}
+
+Common products:
+- "cat_ladder" - cat ladder, access ladder, vertical ladder
+- "court_marking" - court marking, sports court, line marking
+- "glass_partition" - glass partition, glass panel, glass wall
+- "handrail" - handrail, railing, safety rail
+- "skylight" - skylight, roof window
+- "wood_flooring" - wood floor, wooden floor, parquet, engineered wood
+- "vinyl_flooring" - vinyl floor, vinyl sheet
+- "cork_flooring" - cork floor
+- "spc_flooring" - SPC floor, stone plastic composite
+- "lvt_flooring" - LVT floor, luxury vinyl tile
+- "staircase" - staircase, stairs, staircase railing
+- "canopy" - canopy, sunshade, awning
+- "bike_rack" - bike rack, bicycle parking
+- "artificial_grass" - artificial grass, synthetic turf
+- "led_lantern" - LED lantern, light, lighting
+
+Return the product identifier in snake_case. If unclear or no specific product mentioned, return null.
+
+Examples:
+- "show me the cat ladder drawing" → {"product": "cat_ladder"}
+- "how much for court marking?" → {"product": "court_marking"}
+- "glass partition catalog" → {"product": "glass_partition"}
+- "can i see your woodfloor" → {"product": "wood_flooring"}
+- "vinyl flooring options" → {"product": "vinyl_flooring"}
+- "hello" → {"product": null}
+- "thank you" → {"product": null}"""
+                    },
+                    {
+                        "role": "user",
+                        "content": context
+                    }
+                ],
+                temperature=0,
+                response_format={"type": "json_object"},
+                max_tokens=50
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            return result.get('product')
+        except Exception as e:
+            print(f"Error detecting product: {str(e)}")
+            # Fallback: simple keyword matching
+            message_lower = message.lower()
+            if 'cat ladder' in message_lower or 'access ladder' in message_lower:
+                return 'cat_ladder'
+            elif 'court marking' in message_lower or 'line marking' in message_lower:
+                return 'court_marking'
+            elif 'glass partition' in message_lower or 'glass panel' in message_lower:
+                return 'glass_partition'
+            elif 'wood' in message_lower and 'floor' in message_lower:
+                return 'wood_flooring'
+            elif 'vinyl' in message_lower and 'floor' in message_lower:
+                return 'vinyl_flooring'
+            elif 'cork' in message_lower and 'floor' in message_lower:
+                return 'cork_flooring'
+            elif 'spc' in message_lower or 'lvt' in message_lower:
+                return 'spc_flooring' if 'spc' in message_lower else 'lvt_flooring'
+            elif 'stair' in message_lower:
+                return 'staircase'
+            elif 'canopy' in message_lower or 'sunshade' in message_lower:
+                return 'canopy'
+            return None
     
     def _should_offer_quote(self, enquiry: Enquiry, current_response: str) -> bool:
         """Determine if AI should offer to create a quote based on conversation context"""

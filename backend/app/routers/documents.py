@@ -5,7 +5,7 @@ import os
 import uuid
 from pathlib import Path
 from app.database import get_db
-from app.models import User, Document, DocumentStatus
+from app.models import User, Document, DocumentStatus, ProductDocument, ProductDocumentType
 from app.schemas import DocumentResponse, DocumentSummaryUpdate
 from app.auth import get_current_admin
 from app.config import settings
@@ -218,6 +218,13 @@ def process_document(
         db.commit()
         db.refresh(document)
         
+        # Auto-detect and link products if this is a catalog/drawing
+        try:
+            _auto_link_products(db, document, text)
+        except Exception as e:
+            print(f"Error auto-linking products: {str(e)}")
+            # Don't fail the whole processing if auto-link fails
+        
         return document
         
     except Exception as e:
@@ -230,6 +237,89 @@ def process_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing document: {str(e)}"
         )
+
+
+def _auto_link_products(db: Session, document: Document, document_text: str):
+    """Automatically detect products in document and create links"""
+    from openai import OpenAI
+    
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    
+    # Use AI to detect products and document type
+    prompt = f"""Analyze this document and identify:
+1. What products are mentioned (e.g., cat ladder, court marking, glass partition, flooring, railing, etc.)
+2. What type of document this is (catalog, technical_drawing, brochure, or spec_sheet)
+
+Document filename: {document.original_filename}
+Document text excerpt (first 2000 chars): {document_text[:2000]}
+
+Return JSON with:
+{{
+    "products": ["product1", "product2"],  // Use snake_case like "cat_ladder", "court_marking"
+    "document_type": "catalog" // or "technical_drawing", "brochure", "spec_sheet"
+}}
+
+Common products to look for:
+- cat_ladder, access_ladder
+- court_marking, line_marking  
+- glass_partition, glass_panel
+- handrail, safety_rail
+- flooring, vinyl_flooring, wood_flooring, cork_flooring, spc_flooring, lvt_flooring
+- staircase, staircase_railing
+- canopy, sunshade
+- bike_rack
+- led_lantern
+- artificial_grass
+- ezz_green (LED products)
+- rolling_tower, aluminium_tower
+
+If it's a general catalog covering multiple products, list all. If focused on one product, return just that one.
+If filename contains clear product names, prioritize those."""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a product categorization assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0,
+            max_tokens=200
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        products = result.get('products', [])
+        doc_type = result.get('document_type', 'catalog')
+        
+        print(f"Auto-detected products for {document.original_filename}: {products}, type: {doc_type}")
+        
+        # Create links for each detected product
+        for product_name in products:
+            # Check if link already exists
+            existing = db.query(ProductDocument).filter(
+                ProductDocument.product_name == product_name,
+                ProductDocument.document_id == document.id,
+                ProductDocument.document_type == doc_type
+            ).first()
+            
+            if not existing:
+                product_doc = ProductDocument(
+                    product_name=product_name,
+                    document_type=ProductDocumentType(doc_type),
+                    document_id=document.id,
+                    display_order=0,
+                    is_active=True
+                )
+                db.add(product_doc)
+                print(f"Auto-linked {product_name} to document {document.id}")
+        
+        db.commit()
+        
+    except Exception as e:
+        print(f"Error in auto product detection: {str(e)}")
+        # Don't raise - this is optional enhancement
+        pass
 
 
 @router.patch("/{document_id}/summary", response_model=DocumentResponse)
@@ -707,34 +797,186 @@ def cleanup_all_documents(
 
 
 @router.get("/drawings/{product_name}")
-async def get_product_drawing(product_name: str):
-    """Serve product technical drawing (e.g., cat ladder drawing)"""
-    from fastapi.responses import FileResponse, Response
+async def get_product_drawing(
+    product_name: str,
+    document_type: str = "technical_drawing",
+    db: Session = Depends(get_db)
+):
+    """Serve product document (drawing, catalog, etc.)"""
+    from fastapi.responses import FileResponse
     
-    # Get drawing filename from config
-    if product_name not in settings.PRODUCT_DRAWINGS:
+    # Query database for the product document
+    product_doc = db.query(ProductDocument).join(Document).filter(
+        ProductDocument.product_name == product_name,
+        ProductDocument.document_type == document_type,
+        ProductDocument.is_active == True
+    ).order_by(ProductDocument.display_order).first()
+    
+    if not product_doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No drawing available for product: {product_name}"
+            detail=f"No {document_type} available for product: {product_name}"
         )
     
-    filename = settings.PRODUCT_DRAWINGS[product_name]
-    file_path = Path(settings.UPLOAD_DIR) / filename
+    # Get the actual document file path
+    file_path = Path(product_doc.document.file_path)
     
     # Check if file exists
     if not file_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Drawing file not found: {filename}"
+            detail=f"Document file not found: {product_doc.document.original_filename}"
         )
     
     # Return the PDF file with inline disposition so the browser can preview it
     return FileResponse(
         path=str(file_path),
         media_type="application/pdf",
-        filename=filename,
+        filename=product_doc.document.original_filename,
         headers={
-            "Content-Disposition": f"inline; filename={filename}",
+            "Content-Disposition": f"inline; filename={product_doc.document.original_filename}",
             "Cache-Control": "public, max-age=3600"
         }
     )
+
+
+@router.get("/products/list")
+def list_product_documents(
+    product_name: str = None,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """List all product-document mappings (admin only)"""
+    query = db.query(ProductDocument).join(Document)
+    
+    if product_name:
+        query = query.filter(ProductDocument.product_name == product_name)
+    
+    product_docs = query.order_by(
+        ProductDocument.product_name,
+        ProductDocument.display_order
+    ).all()
+    
+    return [
+        {
+            "id": pd.id,
+            "product_name": pd.product_name,
+            "document_type": pd.document_type,
+            "document_id": pd.document_id,
+            "document_filename": pd.document.original_filename,
+            "display_order": pd.display_order,
+            "is_active": pd.is_active,
+            "created_at": pd.created_at,
+            "updated_at": pd.updated_at
+        }
+        for pd in product_docs
+    ]
+
+
+@router.get("/products/{product_name}")
+def get_product_documents(
+    product_name: str,
+    db: Session = Depends(get_db)
+):
+    """List all documents for a specific product"""
+    product_docs = db.query(ProductDocument).join(Document).filter(
+        ProductDocument.product_name == product_name,
+        ProductDocument.is_active == True
+    ).order_by(ProductDocument.display_order).all()
+    
+    return [
+        {
+            "id": pd.id,
+            "document_type": pd.document_type,
+            "document_id": pd.document_id,
+            "document_filename": pd.document.original_filename,
+            "display_order": pd.display_order,
+            "url": f"/api/documents/drawings/{product_name}?document_type={pd.document_type}"
+        }
+        for pd in product_docs
+    ]
+
+
+@router.post("/products")
+def link_document_to_product(
+    product_name: str,
+    document_id: int,
+    document_type: str,
+    display_order: int = 0,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Link a document to a product (admin only)"""
+    # Verify document exists
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document not found: {document_id}"
+        )
+    
+    # Verify document_type is valid
+    try:
+        doc_type_enum = ProductDocumentType(document_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid document type: {document_type}. Must be one of: {[t.value for t in ProductDocumentType]}"
+        )
+    
+    # Check if link already exists
+    existing = db.query(ProductDocument).filter(
+        ProductDocument.product_name == product_name,
+        ProductDocument.document_id == document_id,
+        ProductDocument.document_type == doc_type_enum
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This document is already linked to this product with this type"
+        )
+    
+    # Create the link
+    product_doc = ProductDocument(
+        product_name=product_name,
+        document_type=doc_type_enum,
+        document_id=document_id,
+        display_order=display_order,
+        is_active=True
+    )
+    
+    db.add(product_doc)
+    db.commit()
+    db.refresh(product_doc)
+    
+    return {
+        "id": product_doc.id,
+        "product_name": product_doc.product_name,
+        "document_type": product_doc.document_type,
+        "document_id": product_doc.document_id,
+        "document_filename": document.original_filename,
+        "display_order": product_doc.display_order,
+        "is_active": product_doc.is_active
+    }
+
+
+@router.delete("/products/{link_id}")
+def unlink_document_from_product(
+    link_id: int,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Unlink a document from a product (admin only)"""
+    product_doc = db.query(ProductDocument).filter(ProductDocument.id == link_id).first()
+    
+    if not product_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product-document link not found: {link_id}"
+        )
+    
+    db.delete(product_doc)
+    db.commit()
+    
+    return {"message": "Product-document link deleted successfully"}

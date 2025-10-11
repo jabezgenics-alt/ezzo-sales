@@ -13,10 +13,18 @@ export default function AdminDocuments() {
   const [knowledgeSummary, setKnowledgeSummary] = useState(null); // Master knowledge base summary
   const [generatingSummary, setGeneratingSummary] = useState(false); // Track if generating summary
   const [processingUploaded, setProcessingUploaded] = useState(false); // Track processing uploaded docs
+  const [productLinks, setProductLinks] = useState([]); // Product-document links
+  const [showLinkForm, setShowLinkForm] = useState(null); // Show link form for document ID
+  const [linkFormData, setLinkFormData] = useState({
+    product_name: '',
+    document_type: 'technical_drawing',
+    display_order: 0
+  });
 
   // Fetch documents on component mount
   useEffect(() => {
     fetchDocuments();
+    fetchProductLinks();
   }, []);
 
   const fetchDocuments = async () => {
@@ -33,6 +41,58 @@ export default function AdminDocuments() {
       setError('Failed to load documents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProductLinks = async () => {
+    try {
+      const response = await api.get(`/documents/products/list`);
+      setProductLinks(response.data);
+    } catch (err) {
+      console.error('Error fetching product links:', err);
+    }
+  };
+
+  const handleLinkToProduct = async (documentId) => {
+    try {
+      const response = await api.post(`/documents/products`, null, {
+        params: {
+          product_name: linkFormData.product_name,
+          document_id: documentId,
+          document_type: linkFormData.document_type,
+          display_order: linkFormData.display_order
+        }
+      });
+      
+      // Refresh product links
+      await fetchProductLinks();
+      
+      // Reset form
+      setShowLinkForm(null);
+      setLinkFormData({
+        product_name: '',
+        document_type: 'technical_drawing',
+        display_order: 0
+      });
+      
+      alert(`Successfully linked document to ${linkFormData.product_name}`);
+    } catch (err) {
+      console.error('Error linking document:', err);
+      alert(err.response?.data?.detail || 'Failed to link document to product');
+    }
+  };
+
+  const handleUnlink = async (linkId) => {
+    if (!confirm('Are you sure you want to unlink this document from the product?')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/documents/products/${linkId}`);
+      await fetchProductLinks();
+    } catch (err) {
+      console.error('Error unlinking document:', err);
+      alert('Failed to unlink document');
     }
   };
 
@@ -301,6 +361,33 @@ export default function AdminDocuments() {
 
         <FileUpload ref={fileUploadRef} onFilesUploaded={handleFilesUploaded} />
 
+        {/* Product-Document Links Summary */}
+        {productLinks.length > 0 && (
+          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Product Catalog Links</h2>
+            <div className="space-y-2">
+              {Object.entries(
+                productLinks.reduce((acc, link) => {
+                  if (!acc[link.product_name]) acc[link.product_name] = [];
+                  acc[link.product_name].push(link);
+                  return acc;
+                }, {})
+              ).map(([productName, links]) => (
+                <div key={productName} className="bg-white p-3 rounded border border-blue-200">
+                  <p className="font-semibold text-gray-800">{productName.replace('_', ' ').toUpperCase()}</p>
+                  <div className="mt-1 text-sm text-gray-600">
+                    {links.map(link => (
+                      <span key={link.id} className="inline-block mr-3">
+                        • {link.document_type}: {link.document_filename}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Process Uploaded Documents */}
         {documents.filter(d => d.status === 'uploaded').length > 0 && (
           <div className="mt-8 p-6 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg">
@@ -464,6 +551,12 @@ export default function AdminDocuments() {
                         {doc.status}
                       </span>
                       <button
+                        onClick={() => setShowLinkForm(doc.id)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      >
+                        Link to Product
+                      </button>
+                      <button
                         onClick={() => handleDeleteDocument(doc.id)}
                         className="text-red-600 hover:text-red-800 font-medium text-sm"
                       >
@@ -471,6 +564,85 @@ export default function AdminDocuments() {
                       </button>
                     </div>
                   </div>
+                  
+                  {/* Product Links for this document */}
+                  {productLinks.filter(link => link.document_id === doc.id).length > 0 && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-sm font-semibold text-blue-900 mb-2">Linked to Products:</p>
+                      <div className="space-y-1">
+                        {productLinks.filter(link => link.document_id === doc.id).map(link => (
+                          <div key={link.id} className="flex items-center justify-between text-sm">
+                            <span className="text-blue-800">
+                              <strong>{link.product_name}</strong> ({link.document_type})
+                            </span>
+                            <button
+                              onClick={() => handleUnlink(link.id)}
+                              className="text-red-600 hover:text-red-800 text-xs"
+                            >
+                              Unlink
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Link Form */}
+                  {showLinkForm === doc.id && (
+                    <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded">
+                      <h4 className="font-semibold mb-3">Link to Product</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Product Name</label>
+                          <input
+                            type="text"
+                            value={linkFormData.product_name}
+                            onChange={(e) => setLinkFormData({...linkFormData, product_name: e.target.value})}
+                            placeholder="e.g., cat_ladder, court_marking"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Use snake_case (e.g., cat_ladder, glass_partition)</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Document Type</label>
+                          <select
+                            value={linkFormData.document_type}
+                            onChange={(e) => setLinkFormData({...linkFormData, document_type: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          >
+                            <option value="technical_drawing">Technical Drawing</option>
+                            <option value="catalog">Catalog</option>
+                            <option value="brochure">Brochure</option>
+                            <option value="spec_sheet">Specification Sheet</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Display Order</label>
+                          <input
+                            type="number"
+                            value={linkFormData.display_order}
+                            onChange={(e) => setLinkFormData({...linkFormData, display_order: parseInt(e.target.value)})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleLinkToProduct(doc.id)}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+                          >
+                            Save Link
+                          </button>
+                          <button
+                            onClick={() => setShowLinkForm(null)}
+                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {doc.error_message && (
                     <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
                       <strong>Error:</strong> {doc.error_message}

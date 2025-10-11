@@ -17,8 +17,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add image_url column to enquiry_messages table
-    op.add_column('enquiry_messages', sa.Column('image_url', sa.String(500), nullable=True))
+    # Add image_url column to enquiry_messages table (if not exists)
+    from sqlalchemy import inspect
+    from alembic import context
+    
+    conn = context.get_bind()
+    inspector = inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('enquiry_messages')]
+    
+    if 'image_url' not in columns:
+        op.add_column('enquiry_messages', sa.Column('image_url', sa.String(500), nullable=True))
 
 
 def downgrade() -> None:

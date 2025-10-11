@@ -34,6 +34,13 @@ class QuoteStatus(str, enum.Enum):
     SENT_TO_CUSTOMER = "sent_to_customer"
 
 
+class ProductDocumentType(str, enum.Enum):
+    TECHNICAL_DRAWING = "technical_drawing"
+    CATALOG = "catalog"
+    BROCHURE = "brochure"
+    SPEC_SHEET = "spec_sheet"
+
+
 class User(Base):
     __tablename__ = "users"
     
@@ -66,6 +73,25 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime)
     error_message = Column(Text)
+    
+    # Relationships
+    product_links = relationship("ProductDocument", back_populates="document")
+
+
+class ProductDocument(Base):
+    __tablename__ = "product_documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    product_name = Column(String(255), nullable=False, index=True)
+    document_type = Column(SQLEnum(ProductDocumentType), nullable=False)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    display_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    document = relationship("Document", back_populates="product_links")
 
 
 class KnowledgeChunk(Base):
