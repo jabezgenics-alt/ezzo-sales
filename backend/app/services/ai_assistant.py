@@ -596,7 +596,7 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                 
                 from sqlalchemy.orm.attributes import flag_modified
                 flag_modified(enquiry, "collected_data")
-                db.commit()
+            db.commit()
             
             # Check if draft is ready
             if self._check_if_ready(enquiry):
@@ -823,11 +823,11 @@ Remember: Build rapport with conversation first, offer quotes when appropriate, 
                 
                 # Try to parse the answer based on question type
                 parsed_answer = tree_engine.parse_answer(
-                    user_message, 
-                    next_q.type, 
+                    user_message,
+                    next_q.type,
                     next_q.choices
                 )
-                
+            
                 print(f"Parsed answer for {next_q.key}: {parsed_answer} (type: {type(parsed_answer)})")
                 
                 # Check if parsing succeeded (note: False is a valid answer for boolean!)

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 720
     
     # Application
     APP_NAME: str = "Ezzo Sales AI Quotation System"
@@ -28,11 +28,8 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 10485760  # 10MB
     
-    # Product Drawings (ClassVar so Pydantic doesn't treat as field)
-    PRODUCT_DRAWINGS: ClassVar[Dict[str, str]] = {
-        "cat_ladder": "CATLADDER WCAGE.pdf",
-        # Future: add more products
-    }
+    # Product Drawings (kept for backward compatibility, but unused)
+    PRODUCT_DRAWINGS: ClassVar[Dict[str, str]] = {}
     
     # Admin
     ADMIN_EMAIL: str = "admin@ezzo.com"

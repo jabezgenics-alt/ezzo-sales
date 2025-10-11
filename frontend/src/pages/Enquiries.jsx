@@ -13,6 +13,7 @@ import "@react-pdf-viewer/core/lib/styles/index.css";
 import { zoomPlugin } from "@react-pdf-viewer/zoom";
 import "@react-pdf-viewer/zoom/lib/styles/index.css";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
 
 export default function Enquiries() {
   const [value, setValue] = useState("");
@@ -25,12 +26,18 @@ export default function Enquiries() {
   const [streamingMessage, setStreamingMessage] = useState(null);
   const messagesEndRef = useRef(null);
   const [activeDrawing, setActiveDrawing] = useState(null);
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
-  const pdfWorkerUrl = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  const pdfWorkerUrl = workerUrl;
   const zoomPluginInstance = zoomPlugin();
+  const { ZoomIn, ZoomOut, CurrentScale } = zoomPluginInstance;
+
+  const handleAuthExpired = () => {
+    if (!logout) return;
+    logout();
+  };
 
   const handleDownloadDrawing = (url, filename) => {
     if (!url) return;
@@ -194,7 +201,6 @@ export default function Enquiries() {
 
   const generateConversationTitle = async (firstMessage) => {
     try {
-      // Use AI to generate a creative conversation title
       const response = await api.post('/enquiries/generate-title', {
         message: firstMessage
       });
@@ -520,15 +526,15 @@ export default function Enquiries() {
                 <div className="flex-1 overflow-auto bg-gray-100">
                   <div className="flex flex-col items-center p-4 gap-4">
                     <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
-                      {zoomPluginInstance.ZoomOut && <zoomPluginInstance.ZoomOut />}
-                      {zoomPluginInstance.CurrentScale && (
+                      {ZoomOut && <ZoomOut />}
+                      {CurrentScale && (
                         <div className="px-2">
-                          <zoomPluginInstance.CurrentScale>
+                          <CurrentScale>
                             {(props) => <span className="text-sm font-medium">{`${Math.round(props.scale * 100)}%`}</span>}
-                          </zoomPluginInstance.CurrentScale>
+                          </CurrentScale>
                         </div>
                       )}
-                      {zoomPluginInstance.ZoomIn && <zoomPluginInstance.ZoomIn />}
+                      {ZoomIn && <ZoomIn />}
                     </div>
                     <Worker workerUrl={pdfWorkerUrl}>
                       <div className="w-full max-w-[900px] border border-gray-200 rounded overflow-hidden bg-white">
